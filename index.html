@@ -278,6 +278,12 @@ button:hover{ background:#101a33; }
   <div class="muted" id="highlightsRange" style="margin-top:10px;"></div>
 </section>
 
+<!-- ✅ Form Guide (ADDED) -->
+<section class="section">
+  <h2>📈 Form Guide (Last 5)</h2>
+  <div id="formGuide">Loading…</div>
+</section>
+
 <section class="section">
   <h2>🗓️ Fixtures</h2>
 
@@ -379,7 +385,7 @@ function pill(status){
  * Option A clickability:
  * ✅ League table names clickable
  * ✅ Fixtures home/away clickable
- * ❌ Averages, Records, Highlights NOT clickable
+ * ❌ Averages, Records, Highlights, Form Guide NOT clickable
  */
 function makePlayerClickable(name){
   const safe = esc(name);
@@ -722,6 +728,51 @@ function buildCurrentForm(playerName, maxGames = 5){
   });
 }
 
+/* ✅ Form Guide (ADDED) - All players, not clickable */
+function renderFormGuide(){
+  const el = document.getElementById("formGuide");
+  if (!el) return;
+
+  if (!PLAYER_STATS_CACHE || !Array.isArray(PLAYER_STATS_CACHE)){
+    el.innerHTML = `<div class="muted">Loading players…</div>`;
+    return;
+  }
+  if (!RESULTS_CACHE){
+    el.innerHTML = `<div class="muted">Loading results…</div>`;
+    return;
+  }
+
+  const players = PLAYER_STATS_CACHE
+    .map(p => String(p["Player"] || "").trim())
+    .filter(Boolean);
+
+  const score5 = (form) => form.reduce((t,ch)=> t + (ch==="W"?3:ch==="D"?1:0), 0);
+
+  const rows = players.map(name => {
+    const form = buildCurrentForm(name, 5); // latest first
+    return { name, form, points: score5(form) };
+  });
+
+  // Sort by recent points, then name
+  rows.sort((a,b) => (b.points - a.points) || a.name.localeCompare(b.name));
+
+  const formBadges = (letters) => {
+    if (!letters || !letters.length) return `<span class="muted">—</span>`;
+    return letters.map(ch => `<span class="badge">${esc(ch)}</span>`).join(" ");
+  };
+
+  let html = `<table><thead><tr><th>Player</th><th>Form (Latest → Oldest)</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${esc(r.name)}</td>
+      <td>${formBadges(r.form)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+
+  el.innerHTML = html;
+}
+
 function computeRecordFromResults(playerName){
   if (!RESULTS_CACHE) return {matches:0,wins:0,draws:0,losses:0, legsWon:null, legsLost:null};
   const pn = normName(playerName);
@@ -953,6 +1004,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 
+// delegate player clicks (only League table + Fixtures create these)
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-player]");
   if (!t) return;
@@ -986,6 +1038,9 @@ async function loadAll(){
   const resCSV = await fetch(csvUrl(RESULTS_GID), {cache:"no-store"}).then(r => r.text());
   const resRows = parseCSV(resCSV);
   RESULTS_CACHE = rowsToObjects(resRows);
+
+  // ✅ Build the Form Guide after Results + Player list are loaded
+  renderFormGuide();
 }
 
 document.getElementById("refreshBtn").addEventListener("click", loadAll);
