@@ -233,7 +233,7 @@ button:hover{ background:#101a33; }
   background: rgba(239,68,68,.12);
 }
 
-/* ✅ Footer (ADDED) */
+/* ✅ Footer */
 .site-footer{
   max-width: 1050px;
   margin: 0 auto 26px;
@@ -278,7 +278,6 @@ button:hover{ background:#101a33; }
   <div class="muted" id="highlightsRange" style="margin-top:10px;"></div>
 </section>
 
-<!-- ✅ Form Guide (ADDED) -->
 <section class="section">
   <h2>📈 Form Guide (Last 5)</h2>
   <div id="formGuide">Loading…</div>
@@ -300,7 +299,6 @@ button:hover{ background:#101a33; }
 
 </div>
 
-<!-- ✅ Footer (ADDED) -->
 <footer class="site-footer">
   This site is the property of and is developed and maintained by Discord Darts Leagues.
 </footer>
@@ -533,6 +531,35 @@ function samePlayer(a, b){
   return normName(a) === normName(b);
 }
 
+/* ✅ Date helpers (ADDED for last-14-days highlights) */
+function parseDateAny(s){
+  const t = String(s || "").trim();
+  if (!t) return null;
+
+  // Try native parse first (ISO, "Jan 9 2026", etc.)
+  const d1 = new Date(t);
+  if (!isNaN(d1)) return d1;
+
+  // Try dd/mm/yyyy or dd-mm-yyyy etc
+  const parts = t.split(/[\/\-\.]/).map(x => x.trim());
+  if (parts.length === 3){
+    const [a,b,c] = parts.map(Number);
+
+    // If c looks like year, assume UK format: dd/mm/yyyy
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && c > 1900){
+      const d2 = new Date(c, b-1, a);
+      if (!isNaN(d2)) return d2;
+    }
+  }
+
+  return null;
+}
+function startOfDay(d){
+  const x = new Date(d);
+  x.setHours(0,0,0,0);
+  return x;
+}
+
 /** Records (NOT clickable in Option A) **/
 function renderRecords(playerStatsObjects){
   const get = (obj, key) => obj[key] ?? obj[key.toUpperCase()] ?? obj[key.toLowerCase()] ?? "";
@@ -572,28 +599,39 @@ function renderRecords(playerStatsObjects){
   document.getElementById("records").innerHTML = html;
 }
 
-/** League Highlights - Top 3 each (NOT clickable in Option A) **/
+/** League Highlights - Top 3 each, LAST 14 DAYS ONLY (UPDATED) **/
 function renderLeagueHighlights(statEntryRows){
   const objs = rowsToObjects(statEntryRows);
 
-  const all = objs
-    .map(o => ({
-      player: String(getAny(o, ["Player"]) || "").trim(),
-      s100: num(getAny(o, ["100+","100 +"])),
-      s140: num(getAny(o, ["140+","140 +"])),
-      s180: num(getAny(o, ["180"])),
-      hf:   num(getAny(o, ["Highest Finish","High Finish"])),
-      bl:   num(getAny(o, ["Best Leg","Best Leg (Lowest)"])),
-      cm:   num(getAny(o, ["Checkout Made","Checkouts Made"])),
-      ca:   num(getAny(o, ["Checkout Attempts","Checkouts Attempted","Checkout Attempted"])),
-    }))
-    .filter(x => x.player);
+  const now = new Date();
+  const end = startOfDay(now);
+  end.setDate(end.getDate() + 1); // include today
+  const start = startOfDay(now);
+  start.setDate(start.getDate() - 13); // rolling 14-day window including today
 
-  document.getElementById("highlightsRange").textContent = `Overall (all logged Stat Entry rows)`;
+  const rangeText = `${start.toLocaleDateString()} – ${new Date(end.getTime()-1).toLocaleDateString()}`;
+  document.getElementById("highlightsRange").textContent = `Last 14 days: ${rangeText}`;
+
+  const all = objs
+    .map(o => {
+      const d = parseDateAny(getAny(o, ["Date", "Match Date"]));
+      return {
+        date: d,
+        player: String(getAny(o, ["Player"]) || "").trim(),
+        s100: num(getAny(o, ["100+","100 +"])),
+        s140: num(getAny(o, ["140+","140 +"])),
+        s180: num(getAny(o, ["180"])),
+        hf:   num(getAny(o, ["Highest Finish","High Finish"])),
+        bl:   num(getAny(o, ["Best Leg","Best Leg (Lowest)"])),
+        cm:   num(getAny(o, ["Checkout Made","Checkouts Made"])),
+        ca:   num(getAny(o, ["Checkout Attempts","Checkouts Attempted","Checkout Attempted"])),
+      };
+    })
+    .filter(x => x.player && x.date && x.date >= start && x.date < end);
 
   if (!all.length){
     document.getElementById("highlights").innerHTML =
-      `<div class="panel"><h3>ℹ️ No stats logged yet</h3><div class="muted">Add rows in Stat Entry and it will populate automatically.</div></div>`;
+      `<div class="panel"><h3>ℹ️ No stats logged in the last 14 days</h3><div class="muted">Make sure Stat Entry has a valid Date for each row.</div></div>`;
     return;
   }
 
@@ -655,7 +693,7 @@ function renderLeagueHighlights(statEntryRows){
 
     return `
       <div class="panel">
-        <h3>✅ Best Checkout % (League)</h3>
+        <h3>✅ Best Checkout % (Last 14 days)</h3>
         <ul class="ranklist">
           ${lis || `<li><span class="muted">Not enough checkout data yet</span><span></span></li>`}
         </ul>
@@ -665,12 +703,12 @@ function renderLeagueHighlights(statEntryRows){
   };
 
   const html =
-    topN("Most 180s (League)", "💥", x=>x.s180) +
-    topN("Most 140+ (League)", "🔥", x=>x.s140) +
-    topN("Most 100+ (League)", "🎯", x=>x.s100) +
-    topN("Best Checkout (League)", "🏆", x=>x.hf) +
+    topN("Most 180s (Last 14 days)", "💥", x=>x.s180) +
+    topN("Most 140+ (Last 14 days)", "🔥", x=>x.s140) +
+    topN("Most 100+ (Last 14 days)", "🎯", x=>x.s100) +
+    topN("Best Checkout (Last 14 days)", "🏆", x=>x.hf) +
     checkoutPanel() +
-    topN("Best Leg (Lowest, League)", "⚡", x=>x.bl, v => (v==null? "—": v), "asc");
+    topN("Best Leg (Lowest, Last 14 days)", "⚡", x=>x.bl, v => (v==null? "—": v), "asc");
 
   document.getElementById("highlights").innerHTML = html;
 }
@@ -680,7 +718,7 @@ let PLAYER_STATS_CACHE = null;
 let RESULTS_CACHE = null;
 let STAT_ENTRY_CACHE = null;
 
-/** Current Form + record from Results **/
+/** Current Form **/
 function buildCurrentForm(playerName, maxGames = 5){
   if (!RESULTS_CACHE) return [];
   const pn = normName(playerName);
@@ -728,7 +766,7 @@ function buildCurrentForm(playerName, maxGames = 5){
   });
 }
 
-/* ✅ Form Guide (ADDED) - All players, not clickable */
+/* Form Guide - all players, not clickable */
 function renderFormGuide(){
   const el = document.getElementById("formGuide");
   if (!el) return;
@@ -749,11 +787,10 @@ function renderFormGuide(){
   const score5 = (form) => form.reduce((t,ch)=> t + (ch==="W"?3:ch==="D"?1:0), 0);
 
   const rows = players.map(name => {
-    const form = buildCurrentForm(name, 5); // latest first
+    const form = buildCurrentForm(name, 5);
     return { name, form, points: score5(form) };
   });
 
-  // Sort by recent points, then name
   rows.sort((a,b) => (b.points - a.points) || a.name.localeCompare(b.name));
 
   const formBadges = (letters) => {
@@ -1019,7 +1056,7 @@ async function loadAll(){
 
   const avgCSV = await fetch(csvUrl(AVERAGES_GID), {cache:"no-store"}).then(r => r.text());
   const avgRows = parseCSV(avgCSV);
-  renderTable(avgRows, "averages", []); // ❌ NOT clickable (Option A)
+  renderTable(avgRows, "averages", []); // ❌ NOT clickable
 
   const fixCSV = await fetch(csvUrl(FIXTURES_GID), {cache:"no-store"}).then(r => r.text());
   renderFixtures(parseCSV(fixCSV)); // ✅ clickable home/away
@@ -1033,13 +1070,12 @@ async function loadAll(){
   const seCSV = await fetch(csvUrl(STAT_ENTRY_GID), {cache:"no-store"}).then(r => r.text());
   const seRows = parseCSV(seCSV);
   STAT_ENTRY_CACHE = rowsToObjects(seRows);
-  renderLeagueHighlights(seRows); // ❌ names not clickable, top 3
+  renderLeagueHighlights(seRows); // ✅ now last 14 days
 
   const resCSV = await fetch(csvUrl(RESULTS_GID), {cache:"no-store"}).then(r => r.text());
   const resRows = parseCSV(resCSV);
   RESULTS_CACHE = rowsToObjects(resRows);
 
-  // ✅ Build the Form Guide after Results + Player list are loaded
   renderFormGuide();
 }
 
