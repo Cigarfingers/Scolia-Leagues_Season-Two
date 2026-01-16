@@ -45,7 +45,7 @@ h1{ margin:0 0 6px; font-size: 28px; }
 @media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
 
 table{
-  width:100%;
+  width:100_toggle%;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -243,6 +243,16 @@ button:hover{ background:#101a33; }
   opacity: 0.65;
   border-top: 1px solid #1f2a44;
 }
+
+/* ✅ Recent Results helpers */
+.small{
+  font-size: 12px;
+  opacity: .8;
+}
+.score{
+  font-weight: 700;
+  letter-spacing: .02em;
+}
 </style>
 </head>
 
@@ -281,6 +291,27 @@ button:hover{ background:#101a33; }
 <section class="section">
   <h2>📈 Form Guide (Last 5)</h2>
   <div id="formGuide">Loading…</div>
+</section>
+
+<!-- ✅ NEW: Recent Results -->
+<section class="section">
+  <h2>🧾 Recent Results</h2>
+
+  <div class="toolbar">
+    <div class="muted" id="recentResultsMeta">Loading…</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <select id="recentLeagueFilter">
+        <option value="ALL">All leagues</option>
+      </select>
+      <select id="recentLimit">
+        <option value="5">Last 5</option>
+        <option value="10" selected>Last 10</option>
+        <option value="20">Last 20</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="recentResults">Loading…</div>
 </section>
 
 <section class="section">
@@ -536,22 +567,17 @@ function parseDateAny(s){
   const t = String(s || "").trim();
   if (!t) return null;
 
-  // Try native parse first (ISO, "Jan 9 2026", etc.)
   const d1 = new Date(t);
   if (!isNaN(d1)) return d1;
 
-  // Try dd/mm/yyyy or dd-mm-yyyy etc
   const parts = t.split(/[\/\-\.]/).map(x => x.trim());
   if (parts.length === 3){
     const [a,b,c] = parts.map(Number);
-
-    // If c looks like year, assume UK format: dd/mm/yyyy
     if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && c > 1900){
       const d2 = new Date(c, b-1, a);
       if (!isNaN(d2)) return d2;
     }
   }
-
   return null;
 }
 function startOfDay(d){
@@ -605,9 +631,9 @@ function renderLeagueHighlights(statEntryRows){
 
   const now = new Date();
   const end = startOfDay(now);
-  end.setDate(end.getDate() + 1); // include today
+  end.setDate(end.getDate() + 1);
   const start = startOfDay(now);
-  start.setDate(start.getDate() - 13); // rolling 14-day window including today
+  start.setDate(start.getDate() - 13);
 
   const rangeText = `${start.toLocaleDateString()} – ${new Date(end.getTime()-1).toLocaleDateString()}`;
   document.getElementById("highlightsRange").textContent = `Last 14 days: ${rangeText}`;
@@ -931,6 +957,127 @@ function renderFormPills(formLetters){
   return `<div style="display:flex; gap:8px; flex-wrap:wrap;">${formLetters.map(pillFor).join("")}</div>`;
 }
 
+/** ✅ NEW: Recent Results (uses RESULTS_CACHE CSV) **/
+function renderRecentResults(){
+  const el = document.getElementById("recentResults");
+  const meta = document.getElementById("recentResultsMeta");
+  const leagueSelect = document.getElementById("recentLeagueFilter");
+  const limitSelect = document.getElementById("recentLimit");
+
+  if (!el || !meta || !leagueSelect || !limitSelect) return;
+
+  if (!RESULTS_CACHE || !Array.isArray(RESULTS_CACHE) || !RESULTS_CACHE.length){
+    el.innerHTML = `<div class="muted">No results yet.</div>`;
+    meta.textContent = "";
+    return;
+  }
+
+  const H_DATE   = ["Date"];
+  const H_LEAGUE = ["League"];
+  const H_HOME   = ["Home Player","Home"];
+  const H_AWAY   = ["Away Player","Away"];
+  const H_HLEGS  = ["Home Legs","Home Leg","Home Score"];
+  const H_ALEGS  = ["Away Legs","Away Leg","Away Score"];
+  const H_WINNER = ["Winner"];
+  const H_DRAW   = ["Draw?","Draw"];
+
+  // Populate league filter once
+  if (!leagueSelect.dataset.ready){
+    const leagues = [...new Set(RESULTS_CACHE
+      .map(o => String(getAny(o, H_LEAGUE) || "").trim())
+      .filter(Boolean)
+    )].sort((a,b)=>a.localeCompare(b));
+
+    leagueSelect.innerHTML =
+      `<option value="ALL">All leagues</option>` +
+      leagues.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+
+    leagueSelect.dataset.ready = "1";
+  }
+
+  const selectedLeague = leagueSelect.value || "ALL";
+  const limit = Math.min(Math.max(parseInt(limitSelect.value || "10", 10), 1), 50);
+
+  const played = RESULTS_CACHE
+    .map(o => {
+      const dateStr = String(getAny(o, H_DATE) || "").trim();
+      const d = parseDateAny(dateStr);
+
+      const league = String(getAny(o, H_LEAGUE) || "").trim();
+      const home = String(getAny(o, H_HOME) || "").trim();
+      const away = String(getAny(o, H_AWAY) || "").trim();
+      const hLegs = String(getAny(o, H_HLEGS) || "").trim();
+      const aLegs = String(getAny(o, H_ALEGS) || "").trim();
+
+      const winner = String(getAny(o, H_WINNER) || "").trim();
+      const draw = String(getAny(o, H_DRAW) || "").trim().toLowerCase();
+      const isDraw = ["y","yes","true","1"].includes(draw);
+
+      const isPlayed = !!winner || isDraw;
+
+      return {
+        d,
+        dateStr,
+        league,
+        home, away,
+        hLegs, aLegs,
+        winner,
+        isDraw,
+        isPlayed
+      };
+    })
+    .filter(x => x.isPlayed)
+    .filter(x => selectedLeague === "ALL" ? true : x.league === selectedLeague)
+    .sort((a,b) => {
+      const ta = a.d ? a.d.getTime() : 0;
+      const tb = b.d ? b.d.getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, limit);
+
+  meta.textContent = played.length
+    ? `Showing ${played.length} most recent ${selectedLeague === "ALL" ? "" : selectedLeague + " "}result(s)`
+    : `No played results found`;
+
+  if (!played.length){
+    el.innerHTML = `<div class="muted">No played results to show.</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Date</th>
+    <th>League</th>
+    <th>Home</th>
+    <th></th>
+    <th>Away</th>
+    <th>Outcome</th>
+  </tr></thead><tbody>`;
+
+  played.forEach(r => {
+    const dateOut = r.d ? r.d.toLocaleDateString() : esc(r.dateStr);
+
+    const score = (r.hLegs || r.aLegs)
+      ? `<span class="score">${esc(r.hLegs || "0")} - ${esc(r.aLegs || "0")}</span>`
+      : `<span class="muted">—</span>`;
+
+    const outcome = r.isDraw
+      ? `<span class="badge">Draw</span>`
+      : (r.winner ? `<span class="badge">Winner: ${esc(r.winner)}</span>` : `<span class="muted">—</span>`);
+
+    html += `<tr>
+      <td class="small">${dateOut}</td>
+      <td class="small">${esc(r.league)}</td>
+      <td>${makePlayerClickable(r.home)}</td>
+      <td>${score}</td>
+      <td>${makePlayerClickable(r.away)}</td>
+      <td>${outcome}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  el.innerHTML = html;
+}
+
 /** Player Modal **/
 function openModal(playerName){
   const backdrop = document.getElementById("modalBackdrop");
@@ -972,14 +1119,14 @@ function openModal(playerName){
   const legsWon  = p ? (v("Legs Won")  || (recFromRes.legsWon  ?? "—")) : (recFromRes.legsWon  ?? "—");
   const legsLost = p ? (v("Legs Lost") || (recFromRes.legsLost ?? "—")) : (recFromRes.legsLost ?? "—");
 
-  const s60  = p ? v("60+")  : (fb ? fb.s60  : 0);
-  const s80  = p ? v("80+")  : (fb ? fb.s80  : 0);
-  const s100 = p ? v("100+") : (fb ? fb.s100 : 0);
-  const s140 = p ? v("140+") : (fb ? fb.s140 : 0);
-  const s180 = p ? v("180")  : (fb ? fb.s180 : 0);
+  const s60  = p ? v("60+")  : 0;
+  const s80  = p ? v("80+")  : 0;
+  const s100 = p ? v("100+") : 0;
+  const s140 = p ? v("140+") : 0;
+  const s180 = p ? v("180")  : 0;
 
-  const highestFinish = p ? (v("Highest Finish") || "—") : (fb && fb.highestFinish ? fb.highestFinish : "—");
-  const bestLeg       = p ? (v("Best Leg") || "—")       : (fb && fb.bestLeg ? fb.bestLeg : "—");
+  const highestFinish = p ? (v("Highest Finish") || "—") : "—";
+  const bestLeg       = p ? (v("Best Leg") || "—")       : "—";
 
   const html = `
     <div class="profile-grid">
@@ -1041,7 +1188,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 
-// delegate player clicks (only League table + Fixtures create these)
+// delegate player clicks (only League table + Fixtures + Recent Results create these)
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-player]");
   if (!t) return;
@@ -1070,11 +1217,16 @@ async function loadAll(){
   const seCSV = await fetch(csvUrl(STAT_ENTRY_GID), {cache:"no-store"}).then(r => r.text());
   const seRows = parseCSV(seCSV);
   STAT_ENTRY_CACHE = rowsToObjects(seRows);
-  renderLeagueHighlights(seRows); // ✅ now last 14 days
+  renderLeagueHighlights(seRows);
 
   const resCSV = await fetch(csvUrl(RESULTS_GID), {cache:"no-store"}).then(r => r.text());
   const resRows = parseCSV(resCSV);
   RESULTS_CACHE = rowsToObjects(resRows);
+
+  // ✅ NEW: Recent Results
+  renderRecentResults();
+  document.getElementById("recentLeagueFilter").onchange = renderRecentResults;
+  document.getElementById("recentLimit").onchange = renderRecentResults;
 
   renderFormGuide();
 }
