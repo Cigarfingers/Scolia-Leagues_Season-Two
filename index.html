@@ -411,9 +411,8 @@ function pill(status){
 
 /**
  * Clickability:
- * ✅ League table names clickable
- * ✅ Fixtures home/away clickable
- * ✅ Recent Results home/away clickable
+ * ✅ League table names clickable ONLY
+ * ❌ Fixtures + Recent Results NOT clickable
  * ❌ Averages, Records, Highlights, Form Guide NOT clickable
  */
 function makePlayerClickable(name){
@@ -500,8 +499,8 @@ function renderFixtures(rows){
     weekRows.forEach(r => {
       html += `<tr>
         <td>${esc(r.match)}</td>
-        <td>${makePlayerClickable(r.home)}</td>
-        <td>${makePlayerClickable(r.away)}</td>
+        <td>${esc(r.home)}</td>
+        <td>${esc(r.away)}</td>
         <td>${pill(r.status)}</td>
       </tr>`;
     });
@@ -1073,9 +1072,9 @@ function renderRecentResults(){
     html += `<tr>
       <td class="small">${dateOut}</td>
       <td class="small">${esc(r.league)}</td>
-      <td>${makePlayerClickable(r.home)}</td>
+      <td>${esc(r.home)}</td>
       <td>${score}</td>
-      <td>${makePlayerClickable(r.away)}</td>
+      <td>${esc(r.away)}</td>
       <td>${outcome}</td>
     </tr>`;
   });
@@ -1194,7 +1193,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 
-// delegate player clicks (League Table + Fixtures + Recent Results)
+// delegate player clicks (ONLY league table produces [data-player] spans)
 document.addEventListener("click", (e) => {
   const t = e.target.closest("[data-player]");
   if (!t) return;
@@ -1212,7 +1211,7 @@ async function loadAll(){
   const avgCSV = await fetch(csvUrl(AVERAGES_GID), {cache:"no-store"}).then(r => r.text());
   renderTable(parseCSV(avgCSV), "averages", []);
 
-  // Fixtures (clickable home/away)
+  // Fixtures (NOT clickable)
   const fixCSV = await fetch(csvUrl(FIXTURES_GID), {cache:"no-store"}).then(r => r.text());
   renderFixtures(parseCSV(fixCSV));
 
