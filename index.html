@@ -1036,15 +1036,8 @@ function renderRecentResults(){
     })
     .filter(x => x.isPlayed)
     .filter(x => selectedLeague === "ALL" ? true : x.league === selectedLeague)
-    .sort((a,b) => {
-      const ta = a.d ? a.d.getTime() : null;
-      const tb = b.d ? b.d.getTime() : null;
+    .sort((a,b) => b.rowIndex - a.rowIndex) // mirror sheet order (last added first)
 
-      if (ta !== null && tb !== null) return tb - ta; // newest date first
-      if (ta !== null && tb === null) return -1;      // dated before undated
-      if (ta === null && tb !== null) return 1;
-      return b.rowIndex - a.rowIndex;                 // newest row first
-    })
     .slice(0, limit);
 
   meta.textContent = played.length
