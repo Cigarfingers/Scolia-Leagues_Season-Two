@@ -688,11 +688,18 @@ function renderTable(rows, elId, clickableHeaderNamesLower = []){
   headers.forEach(h => html += `<th>${esc(h)}</th>`);
   html += `</tr></thead><tbody>`;
 
-  rows.slice(1).forEach(r => {
+  rows.slice(1).forEach((r, rowIdx) => {
     html += `<tr>`;
     headers.forEach((_, i) => {
       const v = String(r[i] ?? "");
-      const cell = clickableCols.has(i) ? makePlayerClickable(v) : esc(v);
+      let cell;
+      if (clickableCols.has(i)){
+        const pos = `<span style="opacity:.5;margin-right:6px;font-size:11px;">${rowIdx + 1}</span>`;
+        const safe = esc(v);
+        cell = `${pos}<span class="clickable" data-player="${safe}">${safe}</span>`;
+      } else {
+        cell = esc(v);
+      }
       html += `<td>${cell}</td>`;
     });
     html += `</tr>`;
