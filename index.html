@@ -17,7 +17,7 @@ body{
 
 .wrap{ max-width: 1050px; margin: auto; padding: 26px; }
 
-header{ text-align:center; margin-bottom: 26px; }
+header{ text-align:center; margin-bottom: 18px; }
 
 .logo{
   display:block;
@@ -37,12 +37,28 @@ h1{ margin:0 0 6px; font-size: 28px; }
   padding: 18px;
   margin-bottom: 22px;
   box-shadow: 0 20px 50px rgba(0,0,0,.4);
+
+  /* critical for grid + tables */
+  min-width: 0;
 }
+
+  
+/* Ensure records card also spans full width */
+#records{
+  width: 100%;
+}
+
 
 .section h2{ margin: 0 0 14px; font-size: 18px; display:flex; align-items:center; gap:10px; }
 
 .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
+  
+
+#records{
+  grid-column: 1 / -1;
+}
+
 
 table{
   width:100%;
@@ -73,6 +89,75 @@ td:first-child, th:first-child{
   text-align:left;
   padding-left: 12px;
 }
+  /* =========================
+   Mobile table alignment fix
+   ========================= */
+
+@media (max-width: 600px){
+  table{
+    table-layout: fixed;
+  }
+
+  th, td{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+
+/* Only genuinely wide tables scroll */
+#recentResults,
+#fixtures{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#recentResults table,
+#fixtures table{
+  min-width: 760px;
+}
+/* =========================
+   League table – mobile override (Option A)
+   ========================= */
+
+@media (max-width: 600px){
+
+  /* League table: no truncation, allow scroll */
+  #league{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #league table{
+    min-width: 900px;   /* ensures all columns fit naturally */
+    table-layout: auto;
+  }
+
+  #league th,
+  #league td{
+    white-space: nowrap;   /* no wrapping, no ellipsis */
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* Keep player names readable */
+  #league th:first-child,
+  #league td:first-child{
+    min-width: 180px;
+    white-space: nowrap;
+  }
+}
+
+
+  
+/* Keep score on one line */
+.score{
+  white-space: nowrap;
+  display: inline-block;
+  min-width: 52px;
+}
+
 
 .pill{
   display:inline-flex;
@@ -127,6 +212,17 @@ button:hover{ background:#101a33; }
   text-decoration-color: rgba(255,255,255,.55);
 }
 
+/* Top league switcher */
+.league-switch{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin: 14px 0 4px;
+}
+.league-switch .muted{
+  align-self:center;
+}
 /* Leaderboards */
 .lists{
   display:grid;
@@ -244,6 +340,31 @@ button:hover{ background:#101a33; }
   border-top: 1px solid #1f2a44;
 }
 
+/* Footer advert */
+.footer-ad{
+  display: block;
+  width: 100%;
+  max-width: 1050px;   /* match site width */
+  margin: 10px auto 8px;
+  padding: 0;
+}
+
+.footer-ad img{
+  width: 100%;
+  height: auto;
+  max-height: 110px;   /* desktop size */
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 600px){
+  .footer-ad img{
+    max-height: 75px;  /* mobile size */
+  }
+}
+
+
+  
 /* Recent Results helpers */
 .small{
   font-size: 12px;
@@ -253,7 +374,69 @@ button:hover{ background:#101a33; }
   font-weight: 700;
   letter-spacing: .02em;
 }
+
+/* ========================
+   Player search input
+   ======================== */
+.player-search-wrap{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+#fixturePlayerSearch{
+  background: #0b1220;
+  color: #e5e7eb;
+  border: 1px solid #263554;
+  border-radius: 12px;
+  padding: 8px 32px 8px 12px;
+  cursor: text;
+  font-size: 14px;
+  width: 180px;
+  outline: none;
+  transition: border-color .2s, width .2s;
+}
+
+#fixturePlayerSearch:focus{
+  border-color: #4f6aaa;
+  width: 220px;
+}
+
+#fixturePlayerSearch::placeholder{
+  opacity: .5;
+}
+
+.search-clear-btn{
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #e5e7eb;
+  opacity: .5;
+  padding: 0;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: none;
+  line-height: 1;
+}
+
+.search-clear-btn:hover{
+  opacity: 1;
+  background: none;
+}
+
+#fixturePlayerSearch:not(:placeholder-shown) ~ .search-clear-btn{
+  display: block;
+}
+
+/* Highlight matched player name cells */
+.player-highlight{
+  color: #c7d2fe;
+  font-weight: 600;
+}
 </style>
+
 <!-- GoatCounter Analytics -->
 <script
   data-goatcounter="https://ddlscolialeague.goatcounter.com/count"
@@ -269,6 +452,16 @@ button:hover{ background:#101a33; }
   <img class="logo" src="https://i.postimg.cc/wTwzxQT3/DDL.png" alt="DDL">
   <h1>DDL Scolia League</h1>
   <div class="sub">Live standings, averages & fixtures</div>
+
+  <!-- ✅ NEW: League switcher -->
+  <div class="league-switch">
+    <span class="muted">Viewing:</span>
+    <select id="topLeagueSelect" aria-label="Select League">
+      <option value="premier">Premier League</option>
+      <option value="championship">Championship</option>
+     </select>
+    <span class="muted" id="topLeagueMeta"></span>
+  </div>
 </header>
 
 <div class="grid2">
@@ -282,7 +475,6 @@ button:hover{ background:#101a33; }
     <div id="averages">Loading…</div>
   </section>
 </div>
-
 <section class="section">
   <h2>🔥 Player Records</h2>
   <div class="lists" id="records">Loading…</div>
@@ -323,11 +515,24 @@ button:hover{ background:#101a33; }
   <h2>🗓️ Fixtures</h2>
 
   <div class="toolbar">
-    <div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
       <select id="weekSelect"></select>
       <span class="muted" id="weekSummary"></span>
     </div>
-    <button id="refreshBtn">Refresh</button>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <!-- ✅ NEW: Player name search -->
+      <div class="player-search-wrap">
+        <input
+          type="text"
+          id="fixturePlayerSearch"
+          placeholder="Search player…"
+          autocomplete="off"
+          aria-label="Filter fixtures by player name"
+        >
+        <button class="search-clear-btn" id="fixtureSearchClear" title="Clear search" tabindex="-1">✕</button>
+      </div>
+      <button id="refreshBtn">Refresh</button>
+    </div>
   </div>
 
   <div id="fixtures">Loading…</div>
@@ -336,8 +541,20 @@ button:hover{ background:#101a33; }
 </div>
 
 <footer class="site-footer">
+  <a class="footer-ad"
+     href="https://www.discorddartsleagues.co.uk"
+     target="_blank"
+     rel="noopener">
+    <img
+      src="https://i.postimg.cc/yNV2VdJz/Screen-Shot-2026-02-10-at-00-58-47.jpg"
+      alt="Join the Discord Darts Leagues – www.discorddartsleagues.co.uk"
+      loading="lazy">
+  </a>
+
   This site is the property of and is developed and maintained by Discord Darts Leagues.
 </footer>
+
+
 
 <!-- Player Modal -->
 <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
@@ -357,16 +574,44 @@ button:hover{ background:#101a33; }
 
 <script>
 /** CONFIG **/
-const PUBLISHED_ID  = "2PACX-1vTVhX-SEr3O85L6si4hEs6_XvTuSTXsLS20qVhfLcf_HfHEmgH_7VMFy8dGlALfFOgeHGnX8ZpFkTMg";
+const PUBLISHED_ID  = "2PACX-1vQuCdtSR0_Egs4M4Gd72p94ID6jT0UZmSTWFx4k0Dv4Dfp3FWTwTaDjxypJ1HKO18kLiGSUmCQKM7EX";
 
-const LEAGUE_GID    = "372981515";
-const AVERAGES_GID  = "505988321";
-const FIXTURES_GID  = "309782021";
-const RESULTS_GID   = "1902038275";
+/**
+ * ✅ NEW: League definitions
+ * Premier uses your existing working GIDs.
+ * Replace the Championship + League 1 GIDs with the correct ones.
+ */
+const LEAGUES = {
+  premier: {
+    name: "Premier League",
+    gids: {
+      LEAGUE_GID: "372981515",
+      AVERAGES_GID: "505988321",
+      FIXTURES_GID: "309782021",
+      RESULTS_GID: "1902038275",
+      PLAYER_STATS_GID: "1551531980",
+      STAT_ENTRY_GID: "1520567528"
+    }
+  },
+  championship: {
+    name: "Championship",
+    gids: {
+      LEAGUE_GID: "670468217",
+      AVERAGES_GID: "2105781759",
+      FIXTURES_GID: "1076482281",
+      RESULTS_GID: "1902038275",
+      PLAYER_STATS_GID: "602500658",
+        STAT_ENTRY_GID: "1599660266"
+    }
+  }
+};
 
-const PLAYER_STATS_GID = "1551531980";
-const STAT_ENTRY_GID   = "1520567528";
+let CURRENT_LEAGUE_KEY = "premier";
 
+function setTopLeagueMeta(text){
+  const el = document.getElementById("topLeagueMeta");
+  if (el) el.textContent = text || "";
+}
 /** Helpers **/
 function csvUrl(gid){
   const t = Date.now(); // cache buster
@@ -457,6 +702,101 @@ function renderTable(rows, elId, clickableHeaderNamesLower = []){
   document.getElementById(elId).innerHTML = html;
 }
 
+/** ========================
+ * Fixture player search
+ * ======================== */
+let _fixtureSearchTerm = "";
+let _allFixtureData = []; // store all released fixture rows for cross-week search
+
+function drawFixturesByWeek(data, releasedWeeks){
+  const select = document.getElementById("weekSelect");
+  const week = select.value || releasedWeeks[0];
+  const weekRows = data.filter(d => d.match === week);
+
+  const played = weekRows.filter(d => isGamePlayed(d.status)).length;
+  document.getElementById("weekSummary").textContent = `Played: ${played}/${weekRows.length}`;
+
+  let html = `<table><thead><tr>
+    <th>Match</th><th>Home</th><th>Away</th><th>Status</th>
+  </tr></thead><tbody>`;
+
+  weekRows.forEach(r => {
+    html += `<tr>
+      <td>${esc(r.match)}</td>
+      <td>${esc(r.home)}</td>
+      <td>${esc(r.away)}</td>
+      <td>${pill(r.status)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("fixtures").innerHTML = html;
+}
+
+function drawFixturesByPlayer(term){
+  const matched = _allFixtureData.filter(r =>
+    r.home.toLowerCase().includes(term) || r.away.toLowerCase().includes(term)
+  );
+
+  document.getElementById("weekSummary").textContent =
+    matched.length ? `${matched.length} fixture(s) found` : `No fixtures found`;
+
+  if (!matched.length){
+    document.getElementById("fixtures").innerHTML = `<div class="muted">No fixtures found for "${esc(term)}".</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Match</th><th>Home</th><th>Away</th><th>Status</th>
+  </tr></thead><tbody>`;
+
+  matched.forEach(r => {
+    const homeHighlight = r.home.toLowerCase().includes(term);
+    const awayHighlight = r.away.toLowerCase().includes(term);
+    html += `<tr>
+      <td>${esc(r.match)}</td>
+      <td class="${homeHighlight ? 'player-highlight' : ''}">${esc(r.home)}</td>
+      <td class="${awayHighlight ? 'player-highlight' : ''}">${esc(r.away)}</td>
+      <td>${pill(r.status)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("fixtures").innerHTML = html;
+}
+
+function refreshFixtureView(){
+  const term = _fixtureSearchTerm.trim().toLowerCase();
+  const select = document.getElementById("weekSelect");
+
+  if (term){
+    // Player search mode: show all weeks, hide week selector controls
+    select.style.display = "none";
+    drawFixturesByPlayer(term);
+  } else {
+    // Normal week mode
+    select.style.display = "";
+    const releasedWeeks = [...new Set(_allFixtureData.map(d => d.match))];
+    if (releasedWeeks.length) drawFixturesByWeek(_allFixtureData, releasedWeeks);
+  }
+}
+
+// Wire up search input
+const fixtureSearchInput = document.getElementById("fixturePlayerSearch");
+const fixtureSearchClear = document.getElementById("fixtureSearchClear");
+
+fixtureSearchInput.addEventListener("input", () => {
+  _fixtureSearchTerm = fixtureSearchInput.value;
+  refreshFixtureView();
+});
+
+fixtureSearchClear.addEventListener("click", () => {
+  fixtureSearchInput.value = "";
+  _fixtureSearchTerm = "";
+  refreshFixtureView();
+  fixtureSearchInput.focus();
+});
+
 function renderFixtures(rows){
   const headers = rows[0].map(h => String(h || "").trim());
   const colExact = (name) => headers.findIndex(h => h.toLowerCase() === name);
@@ -487,39 +827,22 @@ function renderFixtures(rows){
     select.innerHTML = `<option value="">No fixtures released</option>`;
     document.getElementById("weekSummary").textContent = "";
     document.getElementById("fixtures").innerHTML = `<div class="muted">No fixtures released yet.</div>`;
+    _allFixtureData = [];
     return;
   }
 
+  // Store all rows belonging to released weeks (not just the single row with the Yes flag)
+  const releasedWeekSet = new Set(releasedWeeks);
+  _allFixtureData = data.filter(d => releasedWeekSet.has(d.match));
+
   select.innerHTML = releasedWeeks.map(w => `<option value="${esc(w)}">Match ${esc(w)}</option>`).join("");
 
-  function draw(){
-    const week = select.value || releasedWeeks[0];
-    const weekRows = data.filter(d => d.match === week);
+  select.onchange = () => {
+    if (!_fixtureSearchTerm.trim()) drawFixturesByWeek(_allFixtureData, releasedWeeks);
+  };
 
-    const played = weekRows.filter(d => isGamePlayed(d.status)).length;
-    document.getElementById("weekSummary").textContent = `Played: ${played}/${weekRows.length}`;
-
-    let html = `<table><thead><tr>
-      <th>Match</th><th>Home</th><th>Away</th><th>Status</th>
-    </tr></thead><tbody>`;
-
-    weekRows.forEach(r => {
-      html += `<tr>
-        <td>${esc(r.match)}</td>
-        <td>${esc(r.home)}</td>
-        <td>${esc(r.away)}</td>
-        <td>${pill(r.status)}</td>
-      </tr>`;
-    });
-
-    html += `</tbody></table>`;
-    document.getElementById("fixtures").innerHTML = html;
-  }
-
-  select.onchange = draw;
-  draw();
+  drawFixturesByWeek(_allFixtureData, releasedWeeks);
 }
-
 function rowsToObjects(rows){
   const headers = rows[0].map(h => String(h || "").trim());
   return rows.slice(1).map(r => {
@@ -562,7 +885,7 @@ function normName(s){
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ")
-    .replace(/[’]/g, "'");
+    .replace(/[']/g, "'");
 }
 function samePlayer(a, b){
   return normName(a) === normName(b);
@@ -591,7 +914,6 @@ function startOfDay(d){
   x.setHours(0,0,0,0);
   return x;
 }
-
 /** Records (NOT clickable) **/
 function renderRecords(playerStatsObjects){
   const get = (obj, key) => obj[key] ?? obj[key.toUpperCase()] ?? obj[key.toLowerCase()] ?? "";
@@ -744,7 +1066,6 @@ function renderLeagueHighlights(statEntryRows){
 
   document.getElementById("highlights").innerHTML = html;
 }
-
 /** Caches **/
 let PLAYER_STATS_CACHE = null;
 let RESULTS_CACHE = null;
@@ -858,7 +1179,7 @@ function checkoutPctFromStatEntry(playerName){
   return pct(made, att);
 }
 
-/** Player stats fallback (when Player Stats sheet doesn’t contain totals) **/
+/** Player stats fallback (when Player Stats sheet doesn't contain totals) **/
 function buildFallbackFromStatEntry(playerName){
   if (!STAT_ENTRY_CACHE) return null;
   const pn = normName(playerName);
@@ -893,7 +1214,6 @@ function buildFallbackFromStatEntry(playerName){
     bestLeg
   };
 }
-
 /** Record/legs from Results **/
 function computeRecordFromResults(playerName){
   if (!RESULTS_CACHE) return {matches:0,wins:0,draws:0,losses:0, legsWon:null, legsLost:null};
@@ -966,7 +1286,7 @@ function renderFormPills(formLetters){
   return `<div style="display:flex; gap:8px; flex-wrap:wrap;">${formLetters.map(pillFor).join("")}</div>`;
 }
 
-/** ✅ Recent Results (FIXED): fall back to newest ROW when Date is blank **/
+/** ✅ Recent Results: mirror sheet order (last added first) **/
 function renderRecentResults(){
   const el = document.getElementById("recentResults");
   const meta = document.getElementById("recentResultsMeta");
@@ -990,7 +1310,7 @@ function renderRecentResults(){
   const H_WINNER = ["Winner"];
   const H_DRAW   = ["Draw?","Draw"];
 
-  // build league list once
+  // build league list once per league load
   if (!leagueSelect.dataset.ready){
     const leagues = [...new Set(RESULTS_CACHE
       .map(o => String(getAny(o, H_LEAGUE) || "").trim())
@@ -1036,8 +1356,7 @@ function renderRecentResults(){
     })
     .filter(x => x.isPlayed)
     .filter(x => selectedLeague === "ALL" ? true : x.league === selectedLeague)
-    .sort((a,b) => b.rowIndex - a.rowIndex) // mirror sheet order (last added first)
-
+    .sort((a,b) => b.rowIndex - a.rowIndex)
     .slice(0, limit);
 
   meta.textContent = played.length
@@ -1082,8 +1401,7 @@ function renderRecentResults(){
   html += `</tbody></table>`;
   el.innerHTML = html;
 }
-
-/** Player Modal (FULL DETAILS RESTORED) **/
+/** Player Modal (FULL DETAILS) **/
 function openModal(playerName){
   const backdrop = document.getElementById("modalBackdrop");
   const nameEl = document.getElementById("modalName");
@@ -1200,46 +1518,179 @@ document.addEventListener("click", (e) => {
   const name = t.getAttribute("data-player");
   if (name) openModal(name);
 });
+/** ✅ NEW: league switching + loader **/
+function getLeagueCfg(){
+  return LEAGUES[CURRENT_LEAGUE_KEY] || LEAGUES.premier;
+}
 
-/** Load all **/
+function resetUIForLoad(){
+  // clear sections quickly to show change
+  document.getElementById("league").innerHTML = "Loading…";
+  document.getElementById("averages").innerHTML = "Loading…";
+  document.getElementById("records").innerHTML = "Loading…";
+  document.getElementById("highlights").innerHTML = "Loading…";
+  document.getElementById("highlightsRange").textContent = "";
+  document.getElementById("formGuide").innerHTML = "Loading…";
+  document.getElementById("recentResults").innerHTML = "Loading…";
+  document.getElementById("recentResultsMeta").textContent = "Loading…";
+  document.getElementById("fixtures").innerHTML = "Loading…";
+  document.getElementById("weekSummary").textContent = "";
+
+  // Reset player search and fixture data on league change
+  fixtureSearchInput.value = "";
+  _fixtureSearchTerm = "";
+  _allFixtureData = [];
+  document.getElementById("weekSelect").style.display = "";
+}
+
+function resetCaches(){
+  PLAYER_STATS_CACHE = null;
+  RESULTS_CACHE = null;
+  STAT_ENTRY_CACHE = null;
+
+  // important: rebuild league list for recent results when league changes
+  const leagueSelect = document.getElementById("recentLeagueFilter");
+  if (leagueSelect){
+    leagueSelect.dataset.ready = "";
+    leagueSelect.innerHTML = `<option value="ALL">All leagues</option>`;
+  }
+}
+
+function parseLeagueFromUrl(){
+  const params = new URLSearchParams(location.search);
+  const key = (params.get("league") || "").toLowerCase();
+  if (LEAGUES[key]) return key;
+  return null;
+}
+function writeLeagueToUrl(key){
+  const url = new URL(location.href);
+  url.searchParams.set("league", key);
+  history.replaceState({}, "", url.toString());
+}
+
+async function safeFetchCSV(gid){
+  if (!gid || gid === "REPLACE_ME"){
+    return null;
+  }
+  const txt = await fetch(csvUrl(gid), {cache:"no-store"}).then(r => r.text());
+  return txt;
+}
+
 async function loadAll(){
+  const cfg = getLeagueCfg();
+  setTopLeagueMeta(`(${cfg.name})`);
+
+  resetCaches();
+  resetUIForLoad();
+
+  const {
+    LEAGUE_GID,
+    AVERAGES_GID,
+    FIXTURES_GID,
+    RESULTS_GID,
+    PLAYER_STATS_GID,
+    STAT_ENTRY_GID
+  } = cfg.gids;
+
+  // ✅ Fetch everything in parallel (big speed-up)
+  const [
+    leagueCSV,
+    avgCSV,
+    fixCSV,
+    psCSV,
+    seCSV,
+    resCSV
+  ] = await Promise.all([
+    safeFetchCSV(LEAGUE_GID),
+    safeFetchCSV(AVERAGES_GID),
+    safeFetchCSV(FIXTURES_GID),
+    safeFetchCSV(PLAYER_STATS_GID),
+    safeFetchCSV(STAT_ENTRY_GID),
+    safeFetchCSV(RESULTS_GID),
+  ]);
+
   // League table (clickable player column)
-  const leagueCSV = await fetch(csvUrl(LEAGUE_GID), {cache:"no-store"}).then(r => r.text());
-  renderTable(parseCSV(leagueCSV), "league", ["player"]);
+  if (!leagueCSV){
+    document.getElementById("league").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} League Table. Replace the REPLACE_ME values.</div>`;
+  } else {
+    renderTable(parseCSV(leagueCSV), "league", ["player"]);
+  }
 
   // Averages (not clickable)
-  const avgCSV = await fetch(csvUrl(AVERAGES_GID), {cache:"no-store"}).then(r => r.text());
-  renderTable(parseCSV(avgCSV), "averages", []);
+  if (!avgCSV){
+    document.getElementById("averages").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} Averages.</div>`;
+  } else {
+    renderTable(parseCSV(avgCSV), "averages", []);
+  }
 
   // Fixtures (NOT clickable)
-  const fixCSV = await fetch(csvUrl(FIXTURES_GID), {cache:"no-store"}).then(r => r.text());
-  renderFixtures(parseCSV(fixCSV));
+  if (!fixCSV){
+    document.getElementById("fixtures").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} Fixtures.</div>`;
+  } else {
+    renderFixtures(parseCSV(fixCSV));
+  }
 
   // Player stats cache (used by modal + records + form guide)
-  const psCSV = await fetch(csvUrl(PLAYER_STATS_GID), {cache:"no-store"}).then(r => r.text());
-  const psRows = parseCSV(psCSV);
-  PLAYER_STATS_CACHE = rowsToObjects(psRows);
-  renderRecords(PLAYER_STATS_CACHE);
+  if (psCSV){
+    const psRows = parseCSV(psCSV);
+    PLAYER_STATS_CACHE = rowsToObjects(psRows);
+    renderRecords(PLAYER_STATS_CACHE);
+  } else {
+    document.getElementById("records").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} Player Stats.</div>`;
+  }
 
   // Stat entry cache (used by highlights + checkout %)
-  const seCSV = await fetch(csvUrl(STAT_ENTRY_GID), {cache:"no-store"}).then(r => r.text());
-  const seRows = parseCSV(seCSV);
-  STAT_ENTRY_CACHE = rowsToObjects(seRows);
-  renderLeagueHighlights(seRows);
+  if (seCSV){
+    const seRows = parseCSV(seCSV);
+    STAT_ENTRY_CACHE = rowsToObjects(seRows);
+    renderLeagueHighlights(seRows);
+  } else {
+    document.getElementById("highlights").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} Stat Entry.</div>`;
+  }
 
   // Results cache (used by recent results + modal record + form guide)
-  const resCSV = await fetch(csvUrl(RESULTS_GID), {cache:"no-store"}).then(r => r.text());
-  const resRows = parseCSV(resCSV);
-  RESULTS_CACHE = rowsToObjects(resRows);
+  if (resCSV){
+    const resRows = parseCSV(resCSV);
+    RESULTS_CACHE = rowsToObjects(resRows);
 
-  // Recent results defaults (Last 5 already selected in HTML)
-  renderRecentResults();
-  document.getElementById("recentLeagueFilter").onchange = renderRecentResults;
-  document.getElementById("recentLimit").onchange = renderRecentResults;
+    // Recent results defaults
+    renderRecentResults();
+    document.getElementById("recentLeagueFilter").onchange = renderRecentResults;
+    document.getElementById("recentLimit").onchange = renderRecentResults;
 
-  // Form guide
-  renderFormGuide();
+    // Form guide
+    renderFormGuide();
+  } else {
+    document.getElementById("recentResults").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} Results.</div>`;
+    document.getElementById("formGuide").innerHTML =
+      `<div class="error">Missing GID for ${esc(cfg.name)} Results (needed for form).</div>`;
+  }
 }
+
+
+/** Top league selector wiring **/
+const topSel = document.getElementById("topLeagueSelect");
+const fromUrl = parseLeagueFromUrl();
+if (fromUrl){
+  CURRENT_LEAGUE_KEY = fromUrl;
+  topSel.value = fromUrl;
+} else {
+  writeLeagueToUrl(CURRENT_LEAGUE_KEY);
+}
+
+topSel.addEventListener("change", () => {
+  const key = topSel.value;
+  if (!LEAGUES[key]) return;
+  CURRENT_LEAGUE_KEY = key;
+  writeLeagueToUrl(key);
+  loadAll();
+});
 
 document.getElementById("refreshBtn").addEventListener("click", loadAll);
 loadAll();
