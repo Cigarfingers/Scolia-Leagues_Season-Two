@@ -1223,6 +1223,14 @@ function renderRecentResults(){
       `<option value="ALL">All leagues</option>` +
       leagues.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
     leagueSelect.dataset.ready = "1";
+
+    // ── FIX: auto-select the current league in the filter ──
+    const currentLeagueName = LEAGUES[CURRENT_LEAGUE_KEY] ? LEAGUES[CURRENT_LEAGUE_KEY].name : null;
+    if (currentLeagueName) {
+      const match = [...leagueSelect.options].find(o => o.value === currentLeagueName);
+      if (match) leagueSelect.value = currentLeagueName;
+    }
+    // ── END FIX ──
   }
 
   const selectedLeague = leagueSelect.value || "ALL";
@@ -1410,6 +1418,7 @@ function resetCaches(){
   PLAYER_STATS_CACHE = null;
   RESULTS_CACHE = null;
   STAT_ENTRY_CACHE = null;
+  // ── FIX: reset the league filter so it re-initialises with correct league pre-selected ──
   const leagueSelect = document.getElementById("recentLeagueFilter");
   if (leagueSelect){
     leagueSelect.dataset.ready = "";
@@ -1435,7 +1444,7 @@ async function safeFetchCSV(gid){
   return txt;
 }
 
-// Fix: wire onchange listeners once, outside loadAll
+// Wire onchange listeners once, outside loadAll
 document.getElementById("recentLeagueFilter").addEventListener("change", renderRecentResults);
 document.getElementById("recentLimit").addEventListener("change", renderRecentResults);
 
