@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDL Scolia League</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+
+<style>
+:root { color-scheme: dark; }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(circle at top, #0f1b33, #050914);
+  color:#e5e7eb;
+}
+
+.wrap{ max-width: 1050px; margin: auto; padding: 26px; }
+
+header{ text-align:center; margin-bottom: 18px; }
+
+.logo{
+  display:block;
+  margin: 0 auto 12px;
+  max-width: 160px;
+  width:100%;
+  height:auto;
+}
+
+h1{ margin:0 0 6px; font-size: 28px; }
+.sub{ opacity:.8; font-size: 14px; }
+
+.section{
+  background: linear-gradient(180deg, #0e1930, #0b1220);
+  border: 1px solid #1f2a44;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 22px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.4);
+  min-width: 0;
+}
+
+#records{
+  width: 100%;
+}
+
+.section h2{ margin: 0 0 14px; font-size: 18px; display:flex; align-items:center; gap:10px; }
+
+.grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 900px){ .grid2{ grid-template-columns: 1fr; } }
+
+#records{
+  grid-column: 1 / -1;
+}
+
+table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td{
+  padding: 10px 8px;
+  text-align:center;
+}
+
+th{
+  background:#111c36;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .05em;
+}
+
+td{
+  border-bottom: 1px solid #1f2a44;
+}
+
+tbody tr:hover{ background: rgba(148,163,184,.08); }
+
+tr.zone-rel     { background: rgba(239,68,68,.07); }
+tr.zone-auto    { background: rgba(34,197,94,.07); }
+tr.zone-playoff { background: rgba(234,179,8,.07); }
+
+.zone-badge { display: inline-block; margin-left: 7px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; vertical-align: middle; opacity: .85; }
+.zone-badge--zone-rel     { background: rgba(239,68,68,.2);  border: 1px solid rgba(239,68,68,.45);  color: #fca5a5; }
+.zone-badge--zone-auto    { background: rgba(34,197,94,.2);  border: 1px solid rgba(34,197,94,.45);  color: #86efac; }
+.zone-badge--zone-playoff { background: rgba(234,179,8,.2);  border: 1px solid rgba(234,179,8,.45);  color: #fde047; }
+
+td:first-child, th:first-child{
+  text-align:left;
+  padding-left: 12px;
+}
+
+@media (max-width: 600px){
+  table{
+    table-layout: fixed;
+  }
+  th, td{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+#recentResults,
+#fixtures{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#recentResults table,
+#fixtures table{
+  min-width: 760px;
+}
+
+@media (max-width: 600px){
+  #league{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #league table{
+    min-width: 900px;
+    table-layout: auto;
+  }
+  #league th,
+  #league td{
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  #league th:first-child,
+  #league td:first-child{
+    min-width: 180px;
+    white-space: nowrap;
+  }
+}
+
+.score{
+  white-space: nowrap;
+  display: inline-block;
+  min-width: 52px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.vs-cell{
+  opacity: .45;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  width: 30px;
+  padding: 10px 0;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space:nowrap;
+}
+
+.pill.played{
+  background: rgba(34,197,94,.15);
+  border:1px solid rgba(34,197,94,.35);
+}
+
+.pill.tbp{
+  background: rgba(239,68,68,.15);
+  border:1px solid rgba(239,68,68,.35);
+}
+
+.toolbar{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+select, button{
+  background:#0b1220;
+  color:#e5e7eb;
+  border:1px solid #263554;
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor:pointer;
+}
+
+button:hover{ background:#101a33; }
+.muted{ opacity:.75; font-size: 12px; }
+
+.clickable{
+  cursor:pointer;
+  color:#c7d2fe;
+  text-decoration: underline;
+  text-decoration-color: rgba(199,210,254,.35);
+  text-underline-offset: 3px;
+}
+.clickable:hover{
+  color:#ffffff;
+  text-decoration-color: rgba(255,255,255,.55);
+}
+
+.league-switch{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin: 14px 0 4px;
+}
+.league-switch .muted{
+  align-self:center;
+}
+
+.lists{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 900px){ .lists{ grid-template-columns: 1fr; } }
+
+.panel{
+  border: 1px solid #1f2a44;
+  border-radius: 14px;
+  background: rgba(17,28,54,.35);
+  padding: 12px;
+}
+.panel h3{
+  margin: 0 0 10px;
+  font-size: 14px;
+  opacity: .9;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.ranklist{ margin:0; padding:0; list-style:none; }
+.ranklist li{
+  display:flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(31,42,68,.6);
+}
+.ranklist li:last-child{ border-bottom:none; }
+.badge{
+  font-size: 12px;
+  opacity:.85;
+  border: 1px solid rgba(38,53,84,.9);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(11,18,32,.6);
+}
+
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display:none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+.modal{
+  width: 100%;
+  max-width: 760px;
+  background: linear-gradient(180deg, #0e1930, #0b1220);
+  border: 1px solid #1f2a44;
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  overflow:hidden;
+}
+.modal-header{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(31,42,68,.7);
+}
+.modal-title{
+  display:flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.modal-title strong{ font-size: 16px; }
+.modal-title span{ font-size: 12px; opacity:.75; }
+.modal-close{
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.modal-body{ padding: 14px 16px; }
+
+.profile-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 800px){ .profile-grid{ grid-template-columns: 1fr; } }
+
+.kpi{
+  border: 1px solid rgba(31,42,68,.7);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(17,28,54,.28);
+}
+.kpi h4{ margin:0 0 8px; font-size: 13px; opacity:.85; }
+.kpi .rows{ display:grid; gap: 8px; }
+.kpi .row{ display:flex; justify-content: space-between; gap: 10px; }
+.kpi .row span:first-child{ opacity:.8; }
+.kpi .row span:last-child{ font-weight: 650; }
+
+.error{
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(239,68,68,.35);
+  background: rgba(239,68,68,.12);
+}
+
+.site-footer{
+  max-width: 1050px;
+  margin: 0 auto 26px;
+  padding: 14px 10px;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.65;
+  border-top: 1px solid #1f2a44;
+}
+
+.footer-ad{
+  display: block;
+  width: 100%;
+  max-width: 1050px;
+  margin: 10px auto 8px;
+  padding: 0;
+}
+
+.footer-ad img{
+  width: 100%;
+  height: auto;
+  max-height: 110px;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 600px){
+  .footer-ad img{
+    max-height: 75px;
+  }
+}
+
+.small{
+  font-size: 12px;
+  opacity: .8;
+}
+
+.player-search-wrap{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+#fixturePlayerSearch{
+  background: #0b1220;
+  color: #e5e7eb;
+  border: 1px solid #263554;
+  border-radius: 12px;
+  padding: 8px 32px 8px 12px;
+  cursor: text;
+  font-size: 14px;
+  width: 180px;
+  outline: none;
+  transition: border-color .2s, width .2s;
+}
+
+#fixturePlayerSearch:focus{
+  border-color: #4f6aaa;
+  width: 220px;
+}
+
+#fixturePlayerSearch::placeholder{
+  opacity: .5;
+}
+
+.search-clear-btn{
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #e5e7eb;
+  opacity: .5;
+  padding: 0;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: none;
+  line-height: 1;
+}
+
+.search-clear-btn:hover{
+  opacity: 1;
+  background: none;
+}
+
+#fixturePlayerSearch:not(:placeholder-shown) ~ .search-clear-btn{
+  display: block;
+}
+
+.player-highlight{
+  color: #c7d2fe;
+  font-weight: 600;
+}
+</style>
+
+<!-- GoatCounter Analytics -->
+<script
+  data-goatcounter="https://ddlscolialeague.goatcounter.com/count"
+  async
+  src="//gc.zgo.at/count.js">
+</script>
+</head>
+
+<body>
+<div class="wrap">
+
+<header>
+  <img class="logo" src="https://i.postimg.cc/wTwzxQT3/DDL.png" alt="DDL">
+  <h1>DDL Scolia League</h1>
+  <div class="sub">Live standings, averages & fixtures</div>
+
+  <div class="league-switch">
+    <span class="muted">Viewing:</span>
+    <select id="topLeagueSelect" aria-label="Select League">
+      <option value="premier">Premier League</option>
+      <option value="championship">Championship</option>
+      <option value="leagueone">League One</option>
+    </select>
+    <span class="muted" id="topLeagueMeta"></span>
+  </div>
+</header>
+
+<div class="grid2">
+  <section class="section">
+    <h2>🏆 League Table</h2>
+    <div id="league">Loading…</div>
+  </section>
+
+  <section class="section">
+    <h2>🎯 Player Averages</h2>
+    <div id="averages">Loading…</div>
+  </section>
+</div>
+
+<section class="section">
+  <h2>🔥 Player Records</h2>
+  <div class="lists" id="records">Loading…</div>
+</section>
+
+<section class="section">
+  <h2>📣 League Highlights</h2>
+  <div class="lists" id="highlights">Loading…</div>
+  <div class="muted" id="highlightsRange" style="margin-top:10px;"></div>
+</section>
+
+<section class="section">
+  <h2>📈 Form Guide (Last 5)</h2>
+  <div id="formGuide">Loading…</div>
+</section>
+
+<section class="section">
+  <h2>🧾 Recent Results</h2>
+  <div class="toolbar">
+    <div class="muted" id="recentResultsMeta">Loading…</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <select id="recentLeagueFilter">
+        <option value="ALL">All leagues</option>
+      </select>
+      <select id="recentLimit">
+        <option value="5" selected>Last 5</option>
+        <option value="10">Last 10</option>
+        <option value="20">Last 20</option>
+      </select>
+    </div>
+  </div>
+  <div id="recentResults">Loading…</div>
+</section>
+
+<section class="section">
+  <h2>🗓️ Fixtures</h2>
+  <div class="toolbar">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select id="weekSelect"></select>
+      <span class="muted" id="weekSummary"></span>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div class="player-search-wrap">
+        <input
+          type="text"
+          id="fixturePlayerSearch"
+          placeholder="Search player…"
+          autocomplete="off"
+          aria-label="Filter fixtures by player name"
+        >
+        <button class="search-clear-btn" id="fixtureSearchClear" title="Clear search" tabindex="-1">✕</button>
+      </div>
+      <button id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+  <div id="fixtures">Loading…</div>
+</section>
+
+</div>
+
+<footer class="site-footer">
+  <a class="footer-ad"
+     href="https://discord.gg/eMP7mP9VCp"
+     target="_blank"
+     rel="noopener">
+    <img
+      src="https://i.postimg.cc/yNV2VdJz/Screen-Shot-2026-02-10-at-00-58-47.jpg"
+      alt="Join the Discord Darts Leagues – www.discorddartsleagues.co.uk"
+      loading="lazy">
+  </a>
+  This site is the property of and is developed and maintained by Discord Darts Leagues.
+</footer>
+
+<!-- Player Modal -->
+<div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalName">
+    <div class="modal-header">
+      <div class="modal-title">
+        <strong id="modalName">Player</strong>
+        <span id="modalSub">Player Profile</span>
+      </div>
+      <button class="modal-close" id="modalClose" type="button">Close</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      Loading…
+    </div>
+  </div>
+</div>
+
+<script>
+/** CONFIG **/
+const PUBLISHED_ID = "2PACX-1vQuCdtSR0_Egs4M4Gd72p94ID6jT0UZmSTWFx4k0Dv4Dfp3FWTwTaDjxypJ1HKO18kLiGSUmCQKM7EX";
+
+const LEAGUES = {
+  premier: {
+    name: "Premier League",
+    gids: {
+      LEAGUE_GID:       "372981515",
+      AVERAGES_GID:     "505988321",
+      FIXTURES_GID:     "309782021",
+      RESULTS_GID:      "1902038275",
+      PLAYER_STATS_GID: "1551531980",
+      STAT_ENTRY_GID:   "1520567528"
+    }
+  },
+  championship: {
+    name: "Championship",
+    gids: {
+      LEAGUE_GID:       "670468217",
+      AVERAGES_GID:     "2105781759",
+      FIXTURES_GID:     "1076482281",
+      RESULTS_GID:      "1902038275",
+      PLAYER_STATS_GID: "602500658",
+      STAT_ENTRY_GID:   "1599660266"
+    }
+  },
+  leagueone: {
+    name: "League One",
+    gids: {
+      LEAGUE_GID:       "REPLACE_ME",
+      AVERAGES_GID:     "REPLACE_ME",
+      FIXTURES_GID:     "REPLACE_ME",
+      RESULTS_GID:      "REPLACE_ME",
+      PLAYER_STATS_GID: "REPLACE_ME",
+      STAT_ENTRY_GID:   "REPLACE_ME"
+    }
+  }
+};
+
+let CURRENT_LEAGUE_KEY = "premier";
+
+function setTopLeagueMeta(text){
+  const el = document.getElementById("topLeagueMeta");
+  if (el) el.textContent = text || "";
+}
+
+function csvUrl(gid){
+  const t = Date.now();
+  return `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?gid=${gid}&single=true&output=csv&t=${t}`;
+}
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], cur = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    const next = text[i+1];
+    if (c === '"' && inQuotes && next === '"'){ cur += '"'; i++; continue; }
+    if (c === '"'){ inQuotes = !inQuotes; continue; }
+    if (c === "," && !inQuotes){ row.push(cur); cur=""; continue; }
+    if ((c === "\n" || c === "\r") && !inQuotes){
+      if (cur.length || row.length){ row.push(cur); rows.push(row); }
+      row = []; cur = "";
+      if (c === "\r" && next === "\n") i++;
+      continue;
+    }
+    cur += c;
+  }
+  if (cur.length || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(cell => String(cell).trim() !== ""));
+}
+
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  })[m]);
+}
+
+function normaliseStatus(status){
+  return String(status ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+function isGamePlayed(status){
+  return normaliseStatus(status) === "game played";
+}
+function pill(status){
+  return isGamePlayed(status)
+    ? `<span class="pill played">✅ Game Played</span>`
+    : `<span class="pill tbp">⏳ To Be Played</span>`;
+}
+
+function getRowZone(rowIdx, totalRows, leagueKey){
+  if (leagueKey === "premier"){
+    if (rowIdx >= totalRows - 2) return { cls: "zone-rel", label: "R", title: "Relegation zone" };
+  }
+  if (leagueKey === "championship"){
+    if (rowIdx === 0)               return { cls: "zone-auto",    label: "P",  title: "Automatic promotion" };
+    if (rowIdx >= 1 && rowIdx <= 4) return { cls: "zone-playoff", label: "PO", title: "Playoff place" };
+  }
+  if (leagueKey === "leagueone"){
+    if (rowIdx === 0)               return { cls: "zone-auto",    label: "P",  title: "Automatic promotion" };
+    if (rowIdx >= 1 && rowIdx <= 3) return { cls: "zone-playoff", label: "PO", title: "Playoff place" };
+  }
+  return null;
+}
+
+function renderTable(rows, elId, clickableHeaderNamesLower = []){
+  if (!rows || rows.length < 2){
+    document.getElementById(elId).innerHTML = `<div class="muted">No data.</div>`;
+    return;
+  }
+  const headers = rows[0].map(h => String(h||"").trim());
+  const clickableCols = new Set();
+  headers.forEach((h, i) => {
+    if (clickableHeaderNamesLower.includes(h.toLowerCase())) clickableCols.add(i);
+  });
+  const totalRows = rows.length - 1;
+  let html = `<table><thead><tr>`;
+  headers.forEach(h => html += `<th>${esc(h)}</th>`);
+  html += `</tr></thead><tbody>`;
+  rows.slice(1).forEach((r, rowIdx) => {
+    const zone = getRowZone(rowIdx, totalRows, CURRENT_LEAGUE_KEY);
+    html += `<tr class="${zone ? zone.cls : ''}">`;
+    headers.forEach((_, i) => {
+      const v = String(r[i] ?? "");
+      let cell;
+      if (clickableCols.has(i)){
+        const pos = `<span style="opacity:.5;margin-right:6px;font-size:11px;">${rowIdx + 1}</span>`;
+        const safe = esc(v);
+        const zoneBadge = zone
+          ? `<span class="zone-badge zone-badge--${zone.cls}" title="${zone.title}">${zone.label}</span>`
+          : '';
+        cell = `${pos}<span class="clickable" data-player="${safe}">${safe}</span>${zoneBadge}`;
+      } else {
+        cell = esc(v);
+      }
+      html += `<td>${cell}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  document.getElementById(elId).innerHTML = html;
+}
+
+/** ========================
+ * Fixture player search
+ * ======================== */
+let _fixtureSearchTerm = "";
+let _allFixtureData = [];
+
+function drawFixturesByWeek(data, releasedWeeks){
+  const select = document.getElementById("weekSelect");
+  const week = select.value || releasedWeeks[0];
+  const weekRows = data.filter(d => d.match === week);
+
+  const played = weekRows.filter(d => isGamePlayed(d.status)).length;
+  document.getElementById("weekSummary").textContent = `Played: ${played}/${weekRows.length}`;
+
+  let html = `<table><thead><tr>
+    <th>Match</th><th>Home</th><th></th><th>Away</th><th>Status</th>
+  </tr></thead><tbody>`;
+
+  weekRows.forEach(r => {
+    html += `<tr>
+      <td>${esc(r.match)}</td>
+      <td>${esc(r.home)}</td>
+      <td class="vs-cell">vs</td>
+      <td>${esc(r.away)}</td>
+      <td>${pill(r.status)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("fixtures").innerHTML = html;
+}
+
+function drawFixturesByPlayer(term){
+  const matched = _allFixtureData.filter(r =>
+    r.home.toLowerCase().includes(term) || r.away.toLowerCase().includes(term)
+  );
+
+  document.getElementById("weekSummary").textContent =
+    matched.length ? `${matched.length} fixture(s) found` : `No fixtures found`;
+
+  if (!matched.length){
+    document.getElementById("fixtures").innerHTML = `<div class="muted">No fixtures found for "${esc(term)}".</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Match</th><th>Home</th><th></th><th>Away</th><th>Status</th>
+  </tr></thead><tbody>`;
+
+  matched.forEach(r => {
+    const homeHighlight = r.home.toLowerCase().includes(term);
+    const awayHighlight = r.away.toLowerCase().includes(term);
+    html += `<tr>
+      <td>${esc(r.match)}</td>
+      <td class="${homeHighlight ? 'player-highlight' : ''}">${esc(r.home)}</td>
+      <td class="vs-cell">vs</td>
+      <td class="${awayHighlight ? 'player-highlight' : ''}">${esc(r.away)}</td>
+      <td>${pill(r.status)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById("fixtures").innerHTML = html;
+}
+
+function refreshFixtureView(){
+  const term = _fixtureSearchTerm.trim().toLowerCase();
+  const select = document.getElementById("weekSelect");
+  if (term){
+    select.style.display = "none";
+    drawFixturesByPlayer(term);
+  } else {
+    select.style.display = "";
+    const releasedWeeks = [...new Set(_allFixtureData.map(d => d.match))];
+    if (releasedWeeks.length) drawFixturesByWeek(_allFixtureData, releasedWeeks);
+  }
+}
+
+const fixtureSearchInput = document.getElementById("fixturePlayerSearch");
+const fixtureSearchClear = document.getElementById("fixtureSearchClear");
+
+fixtureSearchInput.addEventListener("input", () => {
+  _fixtureSearchTerm = fixtureSearchInput.value;
+  refreshFixtureView();
+});
+
+fixtureSearchClear.addEventListener("click", () => {
+  fixtureSearchInput.value = "";
+  _fixtureSearchTerm = "";
+  refreshFixtureView();
+  fixtureSearchInput.focus();
+});
+
+function renderFixtures(rows){
+  const headers = rows[0].map(h => String(h || "").trim());
+  const colExact = (name) => headers.findIndex(h => h.toLowerCase() === name);
+  const colContains = (txt) => headers.findIndex(h => h.toLowerCase().includes(txt));
+
+  const iMatch   = colExact("match");
+  const iHome    = colExact("home");
+  const iAway    = colExact("away");
+  const iStatus  = colExact("status");
+  const iRelease = colContains("release");
+
+  const data = rows.slice(1)
+    .filter(r => String(r[iMatch] ?? "").trim() !== "")
+    .map(r => ({
+      match:    String(r[iMatch]   ?? "").trim(),
+      home:     String(r[iHome]    ?? "").trim(),
+      away:     String(r[iAway]    ?? "").trim(),
+      status:   String(r[iStatus]  ?? "").trim(),
+      released: String(r[iRelease] ?? "").trim().toLowerCase()
+    }));
+
+  const releasedWeeks = [...new Set(
+    data.filter(d => ["yes","true","y","1"].includes(d.released)).map(d => d.match)
+  )].sort((a,b) => (Number(a) - Number(b)));
+
+  const select = document.getElementById("weekSelect");
+  if (!releasedWeeks.length){
+    select.innerHTML = `<option value="">No fixtures released</option>`;
+    document.getElementById("weekSummary").textContent = "";
+    document.getElementById("fixtures").innerHTML = `<div class="muted">No fixtures released yet.</div>`;
+    _allFixtureData = [];
+    return;
+  }
+
+  const releasedWeekSet = new Set(releasedWeeks);
+  _allFixtureData = data.filter(d => releasedWeekSet.has(d.match));
+
+  select.innerHTML = releasedWeeks.map(w => `<option value="${esc(w)}">Match ${esc(w)}</option>`).join("");
+
+  select.onchange = () => {
+    if (!_fixtureSearchTerm.trim()) drawFixturesByWeek(_allFixtureData, releasedWeeks);
+  };
+
+  drawFixturesByWeek(_allFixtureData, releasedWeeks);
+}
+
+function rowsToObjects(rows){
+  const headers = rows[0].map(h => String(h || "").trim());
+  return rows.slice(1).map(r => {
+    const o = {};
+    headers.forEach((h, i) => o[h] = r[i] ?? "");
+    return o;
+  });
+}
+
+function num(x){
+  const n = Number(String(x ?? "").trim().replace("%",""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function pct(made, att){
+  const m = num(made), a = num(att);
+  if (a <= 0) return null;
+  return (m / a) * 100;
+}
+function fmtPct(v, decimals = 2){
+  if (v === null || v === undefined || !Number.isFinite(v)) return "—";
+  return `${v.toFixed(decimals)}%`;
+}
+
+function normKey(s){
+  return String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+function getAny(o, candidates){
+  const keys = Object.keys(o);
+  for (const cand of candidates){
+    const target = normKey(cand);
+    const hit = keys.find(k => normKey(k) === target);
+    if (hit) return o[hit];
+  }
+  return "";
+}
+
+function normName(s){
+  return String(s ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[']/g, "'");
+}
+function samePlayer(a, b){
+  return normName(a) === normName(b);
+}
+
+function parseDateAny(s){
+  const t = String(s || "").trim();
+  if (!t) return null;
+  const d1 = new Date(t);
+  if (!isNaN(d1)) return d1;
+  const parts = t.split(/[\/\-\.]/).map(x => x.trim());
+  if (parts.length === 3){
+    const [a,b,c] = parts.map(Number);
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && c > 1900){
+      const d2 = new Date(c, b-1, a);
+      if (!isNaN(d2)) return d2;
+    }
+  }
+  return null;
+}
+function startOfDay(d){
+  const x = new Date(d);
+  x.setHours(0,0,0,0);
+  return x;
+}
+
+function renderRecords(playerStatsObjects){
+  const get = (obj, key) => obj[key] ?? obj[key.toUpperCase()] ?? obj[key.toLowerCase()] ?? "";
+
+  const leaderboard = (title, emoji, valueKey, dir = "desc", limit=5, isBestLeg=false) => {
+    const items = playerStatsObjects
+      .map(p => ({ player: get(p, "Player"), val: num(get(p, valueKey)) }))
+      .filter(x => x.player && (isBestLeg ? x.val > 0 : true))
+      .sort((a,b) => dir === "asc" ? (a.val - b.val) : (b.val - a.val))
+      .slice(0, limit);
+
+    const lis = items.map((x, i) => `
+      <li>
+        <span>${i+1}. ${esc(x.player)}</span>
+        <span class="badge">${esc(x.val)}</span>
+      </li>
+    `).join("");
+
+    return `
+      <div class="panel">
+        <h3>${emoji} ${esc(title)}</h3>
+        <ul class="ranklist">${lis || `<li><span class="muted">No data yet</span><span></span></li>`}</ul>
+      </div>
+    `;
+  };
+
+  document.getElementById("records").innerHTML =
+    leaderboard("Most 180s", "💥", "180", "desc") +
+    leaderboard("Most 140+", "🔥", "140+", "desc") +
+    leaderboard("Most 100+", "🎯", "100+", "desc") +
+    leaderboard("Highest Finish", "🏆", "Highest Finish", "desc") +
+    leaderboard("Best Leg (Lowest)", "⚡", "Best Leg", "asc", 5, true);
+}
+
+function renderLeagueHighlights(statEntryRows){
+  const objs = rowsToObjects(statEntryRows);
+
+  const now = new Date();
+  const end = startOfDay(now);
+  end.setDate(end.getDate() + 1);
+  const start = startOfDay(now);
+  start.setDate(start.getDate() - 13);
+
+  const rangeText = `${start.toLocaleDateString()} – ${new Date(end.getTime()-1).toLocaleDateString()}`;
+  document.getElementById("highlightsRange").textContent = `Last 14 days: ${rangeText}`;
+
+  const all = objs
+    .map(o => {
+      const d = parseDateAny(getAny(o, ["Date", "Match Date"]));
+      return {
+        date: d,
+        player: String(getAny(o, ["Player"]) || "").trim(),
+        s100: num(getAny(o, ["100+","100 +"])),
+        s140: num(getAny(o, ["140+","140 +"])),
+        s180: num(getAny(o, ["180"])),
+        hf:   num(getAny(o, ["Highest Finish","High Finish"])),
+        bl:   num(getAny(o, ["Best Leg","Best Leg (Lowest)"])),
+        cm:   num(getAny(o, ["Checkout Made","Checkouts Made"])),
+        ca:   num(getAny(o, ["Checkout Attempts","Checkouts Attempted","Checkout Attempted"])),
+      };
+    })
+    .filter(x => x.player && x.date && x.date >= start && x.date < end);
+
+  if (!all.length){
+    document.getElementById("highlights").innerHTML =
+      `<div class="panel"><h3>ℹ️ No stats logged in the last 14 days</h3><div class="muted">Make sure Stat Entry has a valid Date for each row.</div></div>`;
+    return;
+  }
+
+  const agg = new Map();
+  for (const r of all){
+    if (!agg.has(r.player)){
+      agg.set(r.player, {player:r.player, s100:0, s140:0, s180:0, hf:0, bl:null, cm:0, ca:0});
+    }
+    const a = agg.get(r.player);
+    a.s100 += r.s100;
+    a.s140 += r.s140;
+    a.s180 += r.s180;
+    a.hf = Math.max(a.hf, r.hf || 0);
+    if (r.bl > 0) a.bl = (a.bl === null) ? r.bl : Math.min(a.bl, r.bl);
+    a.cm += r.cm;
+    a.ca += r.ca;
+  }
+  const arr = [...agg.values()];
+
+  const topN = (title, emoji, accessor, formatter=(v)=>v, dir="desc", limit=3) => {
+    const sorted = [...arr]
+      .map(x => ({ player: x.player, val: accessor(x) }))
+      .filter(x => x.player && x.val !== null && x.val !== undefined && x.val !== "")
+      .sort((a,b) => dir === "asc" ? (a.val - b.val) : (b.val - a.val))
+      .slice(0, limit);
+
+    const lis = sorted.map((x,i) => `
+      <li>
+        <span>${i+1}. ${esc(x.player)}</span>
+        <span class="badge">${esc(formatter(x.val))}</span>
+      </li>
+    `).join("");
+
+    return `
+      <div class="panel">
+        <h3>${emoji} ${esc(title)}</h3>
+        <ul class="ranklist">
+          ${lis || `<li><span class="muted">No data yet</span><span></span></li>`}
+        </ul>
+      </div>
+    `;
+  };
+
+  const checkoutPanel = () => {
+    const MIN_ATTEMPTS = 5;
+    const eligible = arr
+      .map(x => ({ player: x.player, cp: pct(x.cm, x.ca), att: x.ca }))
+      .filter(x => x.cp !== null && x.att >= MIN_ATTEMPTS)
+      .sort((a,b) => b.cp - a.cp)
+      .slice(0, 3);
+
+    const lis = eligible.map((x,i) => `
+      <li>
+        <span>${i+1}. ${esc(x.player)}</span>
+        <span class="badge">${esc(fmtPct(x.cp))}</span>
+      </li>
+    `).join("");
+
+    return `
+      <div class="panel">
+        <h3>✅ Best Checkout % (Last 14 days)</h3>
+        <ul class="ranklist">
+          ${lis || `<li><span class="muted">Not enough checkout data yet</span><span></span></li>`}
+        </ul>
+        <div class="muted" style="margin-top:8px;">Min attempts: ${MIN_ATTEMPTS}</div>
+      </div>
+    `;
+  };
+
+  document.getElementById("highlights").innerHTML =
+    topN("Most 180s (Last 14 days)", "💥", x=>x.s180) +
+    topN("Most 140+ (Last 14 days)", "🔥", x=>x.s140) +
+    topN("Most 100+ (Last 14 days)", "🎯", x=>x.s100) +
+    topN("Best Checkout (Last 14 days)", "🏆", x=>x.hf) +
+    checkoutPanel() +
+    topN("Best Leg (Lowest, Last 14 days)", "⚡", x=>x.bl, v => (v==null? "—": v), "asc");
+}
+
+let PLAYER_STATS_CACHE = null;
+let RESULTS_CACHE = null;
+let STAT_ENTRY_CACHE = null;
+
+function buildCurrentForm(playerName, maxGames = 5){
+  if (!RESULTS_CACHE) return [];
+  const pn = normName(playerName);
+
+  const H_HOME   = ["Home Player","Home"];
+  const H_AWAY   = ["Away Player","Away"];
+  const H_WINNER = ["Winner"];
+  const H_LOSER  = ["Loser"];
+  const H_DRAW   = ["Draw?","Draw"];
+  const H_DATE   = ["Date"];
+
+  const games = RESULTS_CACHE
+    .map(o => ({
+      date:   String(getAny(o, H_DATE)   ?? "").trim(),
+      home:   String(getAny(o, H_HOME)   ?? "").trim(),
+      away:   String(getAny(o, H_AWAY)   ?? "").trim(),
+      winner: String(getAny(o, H_WINNER) ?? "").trim(),
+      loser:  String(getAny(o, H_LOSER)  ?? "").trim(),
+      draw:   String(getAny(o, H_DRAW)   ?? "").trim(),
+    }))
+    .filter(g => normName(g.home) === pn || normName(g.away) === pn);
+
+  if (!games.length) return [];
+
+  const parse = (d) => { const x = new Date(d); return isNaN(x) ? null : x.getTime(); };
+  const withT = games.map(g => ({...g, t: parse(g.date)}));
+  const sortable = withT.some(g => g.t !== null);
+  const ordered = sortable ? withT.sort((a,b) => (a.t ?? 0) - (b.t ?? 0)) : withT;
+  const last = ordered.slice(-maxGames).reverse();
+
+  return last.map(g => {
+    const isDraw = String(g.draw).trim().toLowerCase();
+    if (["y","yes","true","1"].includes(isDraw)) return "D";
+    if (samePlayer(g.winner, playerName)) return "W";
+    if (samePlayer(g.loser, playerName)) return "L";
+    return "?";
+  });
+}
+
+function renderFormGuide(){
+  const el = document.getElementById("formGuide");
+  if (!el) return;
+  if (!PLAYER_STATS_CACHE || !Array.isArray(PLAYER_STATS_CACHE)){
+    el.innerHTML = `<div class="muted">Loading players…</div>`; return;
+  }
+  if (!RESULTS_CACHE){
+    el.innerHTML = `<div class="muted">Loading results…</div>`; return;
+  }
+
+  const players = PLAYER_STATS_CACHE
+    .map(p => String(p["Player"] || "").trim())
+    .filter(Boolean);
+
+  const score5 = (form) => form.reduce((t,ch)=> t + (ch==="W"?3:ch==="D"?1:0), 0);
+  const rows = players.map(name => {
+    const form = buildCurrentForm(name, 5);
+    return { name, form, points: score5(form) };
+  });
+  rows.sort((a,b) => (b.points - a.points) || a.name.localeCompare(b.name));
+
+  const formBadges = (letters) => {
+    if (!letters || !letters.length) return `<span class="muted">—</span>`;
+    return letters.map(ch => {
+      if (ch === "W") return `<span class="badge" style="border-color:rgba(34,197,94,.55);color:#86efac;">W</span>`;
+      if (ch === "D") return `<span class="badge" style="border-color:rgba(234,179,8,.55);color:#fde047;">D</span>`;
+      if (ch === "L") return `<span class="badge" style="border-color:rgba(239,68,68,.55);color:#fca5a5;">L</span>`;
+      return `<span class="badge">?</span>`;
+    }).join(" ");
+  };
+
+  let html = `<table><thead><tr><th>Player</th><th>Form (Latest → Oldest)</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr><td>${esc(r.name)}</td><td>${formBadges(r.form)}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  el.innerHTML = html;
+}
+
+function checkoutPctFromStatEntry(playerName){
+  if (!STAT_ENTRY_CACHE) return null;
+  const pn = normName(playerName);
+  let made = 0, att = 0;
+  for (const o of STAT_ENTRY_CACHE){
+    const p = String(getAny(o, ["Player"]) || "").trim();
+    if (normName(p) !== pn) continue;
+    made += num(getAny(o, ["Checkout Made","Checkouts Made"]));
+    att  += num(getAny(o, ["Checkout Attempts","Checkouts Attempted","Checkout Attempted"]));
+  }
+  return pct(made, att);
+}
+
+function buildFallbackFromStatEntry(playerName){
+  if (!STAT_ENTRY_CACHE) return null;
+  const pn = normName(playerName);
+  let s60=0,s80=0,s100=0,s140=0,s180=0, highestFinish=0, bestLeg=null, foundAny=false;
+  for (const o of STAT_ENTRY_CACHE){
+    const p = String(getAny(o, ["Player"]) || "").trim();
+    if (normName(p) !== pn) continue;
+    foundAny = true;
+    s60  += num(getAny(o, ["60+","60 +"]));
+    s80  += num(getAny(o, ["80+","80 +"]));
+    s100 += num(getAny(o, ["100+","100 +"]));
+    s140 += num(getAny(o, ["140+","140 +"]));
+    s180 += num(getAny(o, ["180"]));
+    highestFinish = Math.max(highestFinish, num(getAny(o, ["Highest Finish","High Finish"])));
+    const bl = num(getAny(o, ["Best Leg","Best Leg (Lowest)"]));
+    if (bl > 0) bestLeg = (bestLeg === null) ? bl : Math.min(bestLeg, bl);
+  }
+  if (!foundAny) return null;
+  return { s60,s80,s100,s140,s180, highestFinish: highestFinish || null, bestLeg };
+}
+
+function computeRecordFromResults(playerName){
+  if (!RESULTS_CACHE) return {matches:0,wins:0,draws:0,losses:0,legsWon:null,legsLost:null};
+  const pn = normName(playerName);
+
+  const H_HOME      = ["Home Player","Home"];
+  const H_AWAY      = ["Away Player","Away"];
+  const H_WINNER    = ["Winner"];
+  const H_LOSER     = ["Loser"];
+  const H_DRAW      = ["Draw?","Draw"];
+  const H_HOME_LEGS = ["Home Legs","Home Leg","Home Score","Home Legs Won","Home Legs (Won)"];
+  const H_AWAY_LEGS = ["Away Legs","Away Leg","Away Score","Away Legs Won","Away Legs (Won)"];
+
+  let matches=0, wins=0, draws=0, losses=0, legsWon=0, legsLost=0, legsAvailable=false;
+
+  for (const o of RESULTS_CACHE){
+    const home = String(getAny(o, H_HOME) ?? "").trim();
+    const away = String(getAny(o, H_AWAY) ?? "").trim();
+    if (!(normName(home) === pn || normName(away) === pn)) continue;
+    matches++;
+
+    const draw = String(getAny(o, H_DRAW) ?? "").trim().toLowerCase();
+    const isDraw = ["y","yes","true","1"].includes(draw);
+    const winner = String(getAny(o, H_WINNER) ?? "").trim();
+    const loser  = String(getAny(o, H_LOSER)  ?? "").trim();
+
+    if (isDraw) draws++;
+    else if (samePlayer(winner, playerName)) wins++;
+    else if (samePlayer(loser, playerName)) losses++;
+
+    const hl = getAny(o, H_HOME_LEGS);
+    const al = getAny(o, H_AWAY_LEGS);
+    const homeLegs = num(hl);
+    const awayLegs = num(al);
+    if ((String(hl).trim() !== "" || String(al).trim() !== "") && Number.isFinite(homeLegs) && Number.isFinite(awayLegs)){
+      legsAvailable = true;
+      if (normName(home) === pn){ legsWon += homeLegs; legsLost += awayLegs; }
+      else { legsWon += awayLegs; legsLost += homeLegs; }
+    }
+  }
+  return { matches, wins, draws, losses, legsWon: legsAvailable ? legsWon : null, legsLost: legsAvailable ? legsLost : null };
+}
+
+function renderFormPills(formLetters){
+  if (!formLetters || !formLetters.length) return `<span class="muted">No recent results</span>`;
+  const pillFor = (ch) => {
+    if (ch === "W") return `<span class="badge" style="border-color: rgba(34,197,94,.55)">W</span>`;
+    if (ch === "D") return `<span class="badge" style="border-color: rgba(234,179,8,.55)">D</span>`;
+    if (ch === "L") return `<span class="badge" style="border-color: rgba(239,68,68,.55)">L</span>`;
+    return `<span class="badge">?</span>`;
+  };
+  return `<div style="display:flex; gap:8px; flex-wrap:wrap;">${formLetters.map(pillFor).join("")}</div>`;
+}
+
+function renderRecentResults(){
+  const el = document.getElementById("recentResults");
+  const meta = document.getElementById("recentResultsMeta");
+  const leagueSelect = document.getElementById("recentLeagueFilter");
+  const limitSelect = document.getElementById("recentLimit");
+  if (!el || !meta || !leagueSelect || !limitSelect) return;
+
+  if (!RESULTS_CACHE || !Array.isArray(RESULTS_CACHE) || !RESULTS_CACHE.length){
+    el.innerHTML = `<div class="muted">No results yet.</div>`;
+    meta.textContent = "";
+    return;
+  }
+
+  const H_DATE   = ["Date"];
+  const H_LEAGUE = ["League"];
+  const H_HOME   = ["Home Player","Home"];
+  const H_AWAY   = ["Away Player","Away"];
+  const H_HLEGS  = ["Home Legs","Home Leg","Home Score"];
+  const H_ALEGS  = ["Away Legs","Away Leg","Away Score"];
+  const H_WINNER = ["Winner"];
+  const H_DRAW   = ["Draw?","Draw"];
+
+  if (!leagueSelect.dataset.ready){
+    const leagues = [...new Set(RESULTS_CACHE
+      .map(o => String(getAny(o, H_LEAGUE) || "").trim())
+      .filter(Boolean)
+    )].sort((a,b)=>a.localeCompare(b));
+    leagueSelect.innerHTML =
+      `<option value="ALL">All leagues</option>` +
+      leagues.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+    leagueSelect.dataset.ready = "1";
+
+    // Auto-select the current league in the filter
+    const currentLeagueName = LEAGUES[CURRENT_LEAGUE_KEY] ? LEAGUES[CURRENT_LEAGUE_KEY].name : null;
+    if (currentLeagueName) {
+      const match = [...leagueSelect.options].find(o => o.value === currentLeagueName);
+      if (match) leagueSelect.value = currentLeagueName;
+    }
+  }
+
+  const selectedLeague = leagueSelect.value || "ALL";
+  const limit = Math.min(Math.max(parseInt(limitSelect.value || "5", 10), 1), 50);
+
+  const played = RESULTS_CACHE
+    .map((o, idx) => {
+      const dateStr = String(getAny(o, H_DATE) || "").trim();
+      const d = parseDateAny(dateStr);
+      const league = String(getAny(o, H_LEAGUE) || "").trim();
+      const home   = String(getAny(o, H_HOME)   || "").trim();
+      const away   = String(getAny(o, H_AWAY)   || "").trim();
+      const hLegs  = String(getAny(o, H_HLEGS)  || "").trim();
+      const aLegs  = String(getAny(o, H_ALEGS)  || "").trim();
+      const winner = String(getAny(o, H_WINNER) || "").trim();
+      const draw   = String(getAny(o, H_DRAW)   || "").trim().toLowerCase();
+      const isDraw = ["y","yes","true","1"].includes(draw);
+      return { rowIndex: idx, d, dateStr, league, home, away, hLegs, aLegs, winner, isDraw, isPlayed: !!winner || isDraw };
+    })
+    .filter(x => x.isPlayed)
+    .filter(x => selectedLeague === "ALL" ? true : x.league === selectedLeague)
+    .sort((a,b) => b.rowIndex - a.rowIndex)
+    .slice(0, limit);
+
+  meta.textContent = played.length
+    ? `Showing ${played.length} most recent ${selectedLeague === "ALL" ? "" : selectedLeague + " "}result(s)`
+    : `No played results found`;
+
+  if (!played.length){
+    el.innerHTML = `<div class="muted">No played results to show.</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Date</th><th>League</th><th>Home</th><th></th><th>Away</th><th>Outcome</th>
+  </tr></thead><tbody>`;
+
+  played.forEach(r => {
+    const dateOut = r.d ? r.d.toLocaleDateString() : (r.dateStr ? esc(r.dateStr) : `<span class="muted">—</span>`);
+    const score = (r.hLegs || r.aLegs)
+      ? `<span class="score">${esc(r.hLegs || "0")} - ${esc(r.aLegs || "0")}</span>`
+      : `<span class="muted">—</span>`;
+    const outcome = r.isDraw
+      ? `<span class="badge">Draw</span>`
+      : (r.winner ? `<span class="badge">Winner: ${esc(r.winner)}</span>` : `<span class="muted">—</span>`);
+    html += `<tr>
+      <td class="small">${dateOut}</td>
+      <td class="small">${esc(r.league)}</td>
+      <td>${esc(r.home)}</td>
+      <td>${score}</td>
+      <td>${esc(r.away)}</td>
+      <td>${outcome}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>`;
+  el.innerHTML = html;
+}
+
+function openModal(playerName){
+  const backdrop = document.getElementById("modalBackdrop");
+  const nameEl   = document.getElementById("modalName");
+  const bodyEl   = document.getElementById("modalBody");
+
+  nameEl.textContent = playerName;
+  bodyEl.innerHTML = "Loading…";
+  backdrop.style.display = "flex";
+  backdrop.setAttribute("aria-hidden", "false");
+
+  const cpct = fmtPct(checkoutPctFromStatEntry(playerName));
+  const form = renderFormPills(buildCurrentForm(playerName, 5));
+  const recFromRes = computeRecordFromResults(playerName);
+
+  let p = null;
+  if (PLAYER_STATS_CACHE){
+    p = PLAYER_STATS_CACHE.find(x => samePlayer(x["Player"] || "", playerName)) || null;
+  }
+  const fb = buildFallbackFromStatEntry(playerName);
+
+  if (!p && !fb && (!recFromRes.matches || recFromRes.matches === 0)){
+    bodyEl.innerHTML = `
+      <div class="error">
+        No data found for <strong>${esc(playerName)}</strong> yet.<br>
+        <span class="muted">Add them to Player Stats / League Table, log a match result, or enter Stat Entry rows.</span>
+      </div>`;
+    return;
+  }
+
+  const v = (k) => p ? (p[k] ?? "") : "";
+  const matches = p ? (v("Matches") || recFromRes.matches) : recFromRes.matches;
+  const wins    = p ? (v("Wins")    || recFromRes.wins)    : recFromRes.wins;
+  const draws   = p ? (v("Draws")   || recFromRes.draws)   : recFromRes.draws;
+  const losses  = p ? (v("Losses")  || recFromRes.losses)  : recFromRes.losses;
+  const legsWon  = p ? (v("Legs Won")  || (recFromRes.legsWon  ?? "—")) : (recFromRes.legsWon  ?? "—");
+  const legsLost = p ? (v("Legs Lost") || (recFromRes.legsLost ?? "—")) : (recFromRes.legsLost ?? "—");
+  const s60  = p ? v("60+")  : (fb ? fb.s60  : 0);
+  const s80  = p ? v("80+")  : (fb ? fb.s80  : 0);
+  const s100 = p ? v("100+") : (fb ? fb.s100 : 0);
+  const s140 = p ? v("140+") : (fb ? fb.s140 : 0);
+  const s180 = p ? v("180")  : (fb ? fb.s180 : 0);
+  const highestFinish = p ? (v("Highest Finish") || "—") : (fb && fb.highestFinish ? fb.highestFinish : "—");
+  const bestLeg       = p ? (v("Best Leg") || "—")       : (fb && fb.bestLeg ? fb.bestLeg : "—");
+
+  bodyEl.innerHTML = `
+    <div class="profile-grid">
+      <div class="kpi">
+        <h4>Record</h4>
+        <div class="rows">
+          <div class="row"><span>Matches</span><span>${esc(matches)}</span></div>
+          <div class="row"><span>Wins / Draws / Losses</span><span>${esc(wins)} / ${esc(draws)} / ${esc(losses)}</span></div>
+          <div class="row"><span>Legs Won / Lost</span><span>${esc(legsWon)} / ${esc(legsLost)}</span></div>
+        </div>
+      </div>
+      <div class="kpi">
+        <h4>Scoring (Totals)</h4>
+        <div class="rows">
+          <div class="row"><span>60+</span><span>${esc(s60)}</span></div>
+          <div class="row"><span>80+</span><span>${esc(s80)}</span></div>
+          <div class="row"><span>100+</span><span>${esc(s100)}</span></div>
+          <div class="row"><span>140+</span><span>${esc(s140)}</span></div>
+          <div class="row"><span>180</span><span>${esc(s180)}</span></div>
+        </div>
+      </div>
+      <div class="kpi">
+        <h4>Records</h4>
+        <div class="rows">
+          <div class="row"><span>Highest Finish</span><span>${esc(highestFinish)}</span></div>
+          <div class="row"><span>Best Leg (Lowest)</span><span>${esc(bestLeg)}</span></div>
+          <div class="row"><span>Checkout %</span><span>${esc(cpct)}</span></div>
+        </div>
+      </div>
+      <div class="kpi">
+        <h4>Current Form (Last 5)</h4>
+        <div class="rows">
+          <div class="row">
+            <span>Latest → Oldest</span>
+            <span>${form}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function closeModal(){
+  const backdrop = document.getElementById("modalBackdrop");
+  backdrop.style.display = "none";
+  backdrop.setAttribute("aria-hidden", "true");
+}
+
+document.getElementById("modalClose").addEventListener("click", closeModal);
+document.getElementById("modalBackdrop").addEventListener("click", (e) => {
+  if (e.target.id === "modalBackdrop") closeModal();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-player]");
+  if (!t) return;
+  const name = t.getAttribute("data-player");
+  if (name) openModal(name);
+});
+
+function getLeagueCfg(){
+  return LEAGUES[CURRENT_LEAGUE_KEY] || LEAGUES.premier;
+}
+
+function resetUIForLoad(){
+  document.getElementById("league").innerHTML = "Loading…";
+  document.getElementById("averages").innerHTML = "Loading…";
+  document.getElementById("records").innerHTML = "Loading…";
+  document.getElementById("highlights").innerHTML = "Loading…";
+  document.getElementById("highlightsRange").textContent = "";
+  document.getElementById("formGuide").innerHTML = "Loading…";
+  document.getElementById("recentResults").innerHTML = "Loading…";
+  document.getElementById("recentResultsMeta").textContent = "Loading…";
+  document.getElementById("fixtures").innerHTML = "Loading…";
+  document.getElementById("weekSummary").textContent = "";
+  fixtureSearchInput.value = "";
+  _fixtureSearchTerm = "";
+  _allFixtureData = [];
+  document.getElementById("weekSelect").style.display = "";
+}
+
+function resetCaches(){
+  PLAYER_STATS_CACHE = null;
+  RESULTS_CACHE = null;
+  STAT_ENTRY_CACHE = null;
+  // Reset the league filter so it re-initialises with correct league pre-selected
+  const leagueSelect = document.getElementById("recentLeagueFilter");
+  if (leagueSelect){
+    leagueSelect.dataset.ready = "";
+    leagueSelect.innerHTML = `<option value="ALL">All leagues</option>`;
+  }
+}
+
+function parseLeagueFromUrl(){
+  const params = new URLSearchParams(location.search);
+  const key = (params.get("league") || "").toLowerCase();
+  if (LEAGUES[key]) return key;
+  return null;
+}
+function writeLeagueToUrl(key){
+  const url = new URL(location.href);
+  url.searchParams.set("league", key);
+  history.replaceState({}, "", url.toString());
+}
+
+async function safeFetchCSV(gid){
+  if (!gid || gid === "REPLACE_ME") return null;
+  const txt = await fetch(csvUrl(gid), {cache:"no-store"}).then(r => r.text());
+  return txt;
+}
+
+// Wire onchange listeners once, outside loadAll
+document.getElementById("recentLeagueFilter").addEventListener("change", renderRecentResults);
+document.getElementById("recentLimit").addEventListener("change", renderRecentResults);
+
+async function loadAll(){
+  const cfg = getLeagueCfg();
+  setTopLeagueMeta(`(${cfg.name})`);
+  resetCaches();
+  resetUIForLoad();
+
+  const { LEAGUE_GID, AVERAGES_GID, FIXTURES_GID, RESULTS_GID, PLAYER_STATS_GID, STAT_ENTRY_GID } = cfg.gids;
+
+  const [leagueCSV, avgCSV, fixCSV, psCSV, seCSV, resCSV] = await Promise.all([
+    safeFetchCSV(LEAGUE_GID),
+    safeFetchCSV(AVERAGES_GID),
+    safeFetchCSV(FIXTURES_GID),
+    safeFetchCSV(PLAYER_STATS_GID),
+    safeFetchCSV(STAT_ENTRY_GID),
+    safeFetchCSV(RESULTS_GID),
+  ]);
+
+  if (!leagueCSV){
+    document.getElementById("league").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} League Table.</div>`;
+  } else {
+    renderTable(parseCSV(leagueCSV), "league", ["player"]);
+  }
+
+  if (!avgCSV){
+    document.getElementById("averages").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} Averages.</div>`;
+  } else {
+    renderTable(parseCSV(avgCSV), "averages", []);
+  }
+
+  if (!fixCSV){
+    document.getElementById("fixtures").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} Fixtures.</div>`;
+  } else {
+    renderFixtures(parseCSV(fixCSV));
+  }
+
+  if (psCSV){
+    const psRows = parseCSV(psCSV);
+    PLAYER_STATS_CACHE = rowsToObjects(psRows);
+    renderRecords(PLAYER_STATS_CACHE);
+  } else {
+    document.getElementById("records").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} Player Stats.</div>`;
+  }
+
+  if (seCSV){
+    const seRows = parseCSV(seCSV);
+    STAT_ENTRY_CACHE = rowsToObjects(seRows);
+    renderLeagueHighlights(seRows);
+  } else {
+    document.getElementById("highlights").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} Stat Entry.</div>`;
+  }
+
+  if (resCSV){
+    const resRows = parseCSV(resCSV);
+    RESULTS_CACHE = rowsToObjects(resRows);
+    renderRecentResults();
+    renderFormGuide();
+  } else {
+    document.getElementById("recentResults").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} Results.</div>`;
+    document.getElementById("formGuide").innerHTML = `<div class="error">Missing GID for ${esc(cfg.name)} Results (needed for form).</div>`;
+  }
+}
+
+const topSel = document.getElementById("topLeagueSelect");
+const fromUrl = parseLeagueFromUrl();
+if (fromUrl){
+  CURRENT_LEAGUE_KEY = fromUrl;
+  topSel.value = fromUrl;
+} else {
+  writeLeagueToUrl(CURRENT_LEAGUE_KEY);
+}
+
+topSel.addEventListener("change", () => {
+  const key = topSel.value;
+  if (!LEAGUES[key]) return;
+  CURRENT_LEAGUE_KEY = key;
+  writeLeagueToUrl(key);
+  loadAll();
+});
+
+document.getElementById("refreshBtn").addEventListener("click", loadAll);
+loadAll();
+</script>
+
+</body>
+</html>
