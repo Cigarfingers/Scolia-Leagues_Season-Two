@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="School Booking">
+<meta name="theme-color" content="#22261f">
+<title>School Booking</title>
+<link rel="manifest" id="manifest-link" href="">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script>
+  // Yard slug comes from the URL: /y/:slug[/...]
+  window.YARD_SLUG = location.pathname.split('/').filter(Boolean)[1] || '';
+  document.getElementById('manifest-link').href = '/y/' + window.YARD_SLUG + '/manifest.json';
+  if ("serviceWorker" in navigator && window.YARD_SLUG) {
+    navigator.serviceWorker.register("/sw.js", { scope: '/y/' + window.YARD_SLUG + '/' });
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #22261f;         /* chalkboard charcoal, warm not blue */
+    --board: #262b23;
+    --board-line: #3a4033;
+    --chalk: #f0ece0;      /* chalk white */
+    --chalk-dim: #9aa093;
+    --rust: #a8542f;       /* bay/chestnut — booked slots */
+    --rust-bright: #c26840;
+    --green: #3f5c46;      /* hunter/tack-room green — secondary UI */
+    --green-bright: #5a8065;
+    --red: #b6483c;
+    --radius: 10px;
+    --font-d: 'Kalam', cursive;
+    --font-b: 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg); color: var(--chalk); font-family: var(--font-b);
+    min-height: 100vh; min-height: -webkit-fill-available;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 0%, #3a4033 0%, transparent 60%);
+  }
+  .page { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px)); display: flex; flex-direction: column; gap: 16px; min-height: 100vh; }
+
+  .header { text-align: center; }
+  .header-logo {
+    width: 150px; height: auto; border-radius: 16px; display: block; margin: 0 auto 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+  .title { font-family: var(--font-d); font-weight: 700; font-size: 40px; color: var(--chalk); line-height: 1; }
+  .subtitle { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--chalk-dim); margin-top: 4px; }
+
+  .notify-banner {
+    display: none; background: var(--board); border: 1px solid var(--green); border-radius: var(--radius);
+    padding: 12px 14px; font-size: 13px; color: var(--chalk); display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  }
+  .notify-banner button {
+    background: var(--green); color: var(--chalk); border: none; border-radius: 8px; font-family: var(--font-b);
+    font-weight: 600; font-size: 12px; padding: 8px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .notify-banner.on { border-color: var(--green-bright); }
+  .notify-banner.on button { background: transparent; border: 1px solid var(--board-line); color: var(--chalk-dim); }
+  .notify-banner .dot-on { color: var(--green-bright); margin-right: 6px; }
+
+  .week-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .week-nav button { background: var(--board); border: 1px solid var(--board-line); color: var(--chalk); border-radius: 8px; padding: 8px 14px; font-size: 16px; cursor: pointer; }
+  .week-nav button:active { background: var(--board-line); }
+  .week-range { font-size: 12px; color: var(--chalk-dim); text-align: center; flex: 1; }
+
+  .day-tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .day-tab {
+    background: var(--board); border: 1px solid var(--board-line); border-radius: 8px;
+    padding: 8px 2px; text-align: center; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+  }
+  .day-tab .dname { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--chalk-dim); }
+  .day-tab .dnum { font-family: var(--font-d); font-weight: 700; font-size: 18px; color: var(--chalk); }
+  .day-tab.today { border-color: var(--green-bright); }
+  .day-tab.selected { background: var(--green); border-color: var(--green-bright); }
+  .day-tab .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--rust); margin: 1px auto 0; visibility: hidden; }
+  .day-tab.has-bookings .dot { visibility: visible; }
+
+  .day-label { font-family: var(--font-d); font-weight: 700; font-size: 22px; color: var(--chalk); padding-top: 4px; }
+
+  .slot-list { display: flex; flex-direction: column; gap: 6px; }
+  .slot {
+    background: var(--board); border: 1px solid var(--board-line); border-radius: var(--radius);
+    padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;
+    transition: all .12s;
+  }
+  .slot:active { transform: scale(0.98); }
+  .slot-time { font-family: var(--font-b); font-weight: 600; font-size: 13px; color: var(--chalk-dim); min-width: 48px; }
+  .slot-status { flex: 1; text-align: right; font-size: 14px; }
+  .slot.free .slot-status { color: var(--chalk-dim); font-style: italic; }
+  .slot.booked { background: #2e2013; border-color: var(--rust); }
+  .slot.booked .slot-status { color: var(--rust-bright); font-family: var(--font-d); font-weight: 700; font-size: 17px; letter-spacing: .3px; }
+  .slot.mine.booked { border-color: var(--green-bright); background: #1e2a20; }
+  .slot.mine.booked .slot-status { color: var(--green-bright); }
+  .slot-sharer { font-size: 12px; color: var(--chalk-dim); font-style: italic; margin-top: 2px; }
+  .slot.booked .slot-sharer { color: var(--rust-bright); font-style: normal; }
+  .slot-badge { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--green-bright); border: 1px solid var(--green); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
+  .share-toggle { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--chalk-dim); cursor: pointer; line-height: 1.35; }
+  .share-toggle input { margin-top: 2px; width: 18px; height: 18px; accent-color: var(--green-bright); flex-shrink: 0; }
+  .slot.past { opacity: .4; pointer-events: none; }
+
+  /* ── modal ── */
+  .modal-bg { display: none; position: fixed; inset: 0; z-index: 50; background: rgba(10,12,8,.75); align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--board); border: 1px solid var(--board-line); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 480px; padding: 22px 20px calc(22px + env(safe-area-inset-bottom,0px)); display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal-title { font-family: var(--font-d); font-weight: 700; font-size: 24px; color: var(--chalk); }
+  .modal-sub { font-size: 13px; color: var(--chalk-dim); margin-top: -8px; }
+  .field-input {
+    width: 100%; background: var(--bg); border: 1px solid var(--board-line); border-radius: 8px;
+    color: var(--chalk); font-family: var(--font-b); font-size: 16px; padding: 12px 14px; outline: none;
+  }
+  .field-input:focus { border-color: var(--green-bright); }
+  .modal-err { color: var(--red); font-size: 13px; min-height: 16px; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btn { flex: 1; border: none; border-radius: 10px; font-family: var(--font-b); font-weight: 600; font-size: 15px; padding: 13px; cursor: pointer; }
+  .modal-btn.primary { background: var(--green); color: var(--chalk); }
+  .modal-btn.danger { background: var(--red); color: var(--chalk); }
+  .modal-btn.cancel { background: transparent; border: 1px solid var(--board-line); color: var(--chalk-dim); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom,0px)); transform: translateX(-50%);
+    z-index: 100; background: var(--board); border: 1px solid var(--board-line); border-radius: 10px;
+    padding: 12px 18px; font-size: 13px; color: var(--chalk); max-width: 90vw; text-align: center;
+    opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+
+  /* ── view toggle ── */
+  .view-toggle { display: flex; gap: 4px; background: var(--board); border: 1px solid var(--board-line); border-radius: 10px; padding: 4px; }
+  .view-tab { flex: 1; background: transparent; border: none; color: var(--chalk-dim); font-family: var(--font-b); font-weight: 600; font-size: 14px; padding: 9px; border-radius: 7px; cursor: pointer; }
+  .view-tab.selected { background: var(--green); color: var(--chalk); }
+
+  .empty-msg { text-align: center; color: var(--chalk-dim); font-size: 14px; padding: 24px 0; font-style: italic; }
+
+  /* ── week summary ── */
+  .week-summary { display: none; flex-direction: column; gap: 8px; }
+  .wk-day {
+    background: var(--board); border: 1px solid var(--board-line); border-radius: var(--radius);
+    padding: 12px 14px; cursor: pointer; transition: all .12s;
+  }
+  .wk-day:active { transform: scale(0.99); }
+  .wk-day.today { border-color: var(--green-bright); }
+  .wk-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .wk-day-name { font-family: var(--font-d); font-weight: 700; font-size: 19px; color: var(--chalk); }
+  .wk-day-count { font-size: 12px; color: var(--chalk-dim); }
+  .wk-day-count.full { color: var(--rust-bright); }
+  .wk-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+  .wk-chip {
+    background: #2e2013; border: 1px solid var(--rust); border-radius: 6px;
+    padding: 3px 8px; font-size: 12px; color: var(--rust-bright); display: flex; gap: 6px; align-items: baseline;
+  }
+  .wk-chip .t { font-weight: 600; font-family: var(--font-b); font-size: 11px; }
+  .wk-chip .n { font-family: var(--font-d); font-weight: 700; }
+  .wk-chip.mine { border-color: var(--green-bright); background: #1e2a20; color: var(--green-bright); }
+  .wk-none { font-size: 13px; color: var(--chalk-dim); font-style: italic; margin-top: 7px; }
+</style>
+</head>
+<body>
+<div class="page" id="page-notfound" style="display:none; align-items:center; justify-content:center; text-align:center; gap:8px;">
+  <div class="title">Yard not found</div>
+  <div class="subtitle" style="text-transform:none; letter-spacing:normal; font-size:14px;">Check the link your yard gave you.</div>
+</div>
+<div class="page" id="page-expired" style="display:none; align-items:center; justify-content:center; text-align:center; gap:8px;">
+  <div class="title">Subscription ended</div>
+  <div class="subtitle" style="text-transform:none; letter-spacing:normal; font-size:14px;" id="expired-message">This board's subscription has ended.</div>
+</div>
+<div class="page" id="page-main">
+  <div class="header">
+    <img class="header-logo" src="/header-logo.png" alt="">
+    <div class="title" id="yard-title">School Booking</div>
+    <div class="subtitle" id="yard-subtitle">Booking Board</div>
+  </div>
+
+  <div class="notify-banner" id="share-banner" style="display:flex;">
+    <span>Invite other owners to this board</span>
+    <button onclick="openShareBoard()">Share</button>
+  </div>
+
+  <div class="notify-banner" id="notify-banner">
+    <span id="notify-msg">Get pinged when the board changes</span>
+    <button id="notify-btn" onclick="toggleNotifications()">Enable</button>
+  </div>
+
+  <div class="view-toggle">
+    <button id="tab-day" class="view-tab selected" onclick="setView('day')">Day</button>
+    <button id="tab-week" class="view-tab" onclick="setView('week')">Week</button>
+  </div>
+
+  <div class="week-nav">
+    <button onclick="changeWeek(-1)">‹</button>
+    <div class="week-range" id="week-range"></div>
+    <button onclick="changeWeek(1)">›</button>
+  </div>
+
+  <div class="day-tabs" id="day-tabs"></div>
+
+  <div class="day-label" id="day-label"></div>
+  <div class="slot-list" id="slot-list"></div>
+
+  <div class="week-summary" id="week-summary"></div>
+
+  <a id="admin-link" href="#" style="text-align:center; font-size:11px; color:var(--chalk-dim); text-decoration:none; letter-spacing:.5px; padding-top:4px;">Yard admin</a>
+</div>
+
+<!-- Share board modal -->
+<div class="modal-bg" id="modal-share-board">
+  <div class="modal">
+    <div class="modal-title">Share this board</div>
+    <div class="modal-sub">Anyone with this link or QR code can view and book slots — no login needed.</div>
+    <div style="background:#fff; border-radius:10px; padding:14px; display:flex; justify-content:center;">
+      <img id="share-qr-img" src="" alt="QR code for this board" style="width:200px; height:200px;">
+    </div>
+    <div class="field-input" id="share-link-text" style="display:none; user-select:all; word-break:break-all; cursor:text; -webkit-user-select:all;"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal('modal-share-board')">Close</button>
+      <button class="modal-btn primary" onclick="copyShareLink()">Copy Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- Book slot modal -->
+<div class="modal-bg" id="modal-book">
+  <div class="modal">
+    <div class="modal-title" id="book-modal-title">Book this slot</div>
+    <div class="modal-sub" id="book-modal-sub"></div>
+    <input class="field-input" id="book-name" placeholder="Who's booking in? e.g. Your Name" maxlength="60" autocomplete="off">
+    <label class="share-toggle">
+      <input type="checkbox" id="book-open-share">
+      <span>Open to sharing — let someone request to join this slot</span>
+    </label>
+    <div class="modal-err" id="book-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal('modal-book')">Cancel</button>
+      <button class="modal-btn primary" onclick="confirmBooking()">Book It</button>
+    </div>
+  </div>
+</div>
+
+<!-- Request to share modal -->
+<div class="modal-bg" id="modal-share-request">
+  <div class="modal">
+    <div class="modal-title">Request to share</div>
+    <div class="modal-sub" id="share-req-sub"></div>
+    <input class="field-input" id="share-req-name" placeholder="Your name — e.g. Leanne" maxlength="60" autocomplete="off">
+    <div class="modal-err" id="share-req-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal('modal-share-request')">Cancel</button>
+      <button class="modal-btn primary" onclick="confirmShareRequest()">Send Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pending share request (owner decides) -->
+<div class="modal-bg" id="modal-share-decide">
+  <div class="modal">
+    <div class="modal-title">Share request</div>
+    <div class="modal-sub" id="share-decide-sub"></div>
+    <div class="modal-err" id="share-decide-err"></div>
+    <div class="modal-btns">
+      <button class="modal-btn danger" onclick="respondShare('decline')">Decline</button>
+      <button class="modal-btn primary" onclick="respondShare('accept')">Accept</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage slot modal — adapts to whether you own it, share it, or could request to share -->
+<div class="modal-bg" id="modal-cancel">
+  <div class="modal">
+    <div class="modal-title" id="manage-title">Booking</div>
+    <div class="modal-sub" id="cancel-modal-sub"></div>
+    <input class="field-input" id="cancel-name-input" style="display:none" placeholder="Type the exact name on this booking" maxlength="60" autocomplete="off">
+    <div class="modal-err" id="cancel-err"></div>
+    <div class="modal-btns" id="manage-btns"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Device identity — no accounts, just a private per-device token ──────
+let deviceToken = localStorage.getItem('yb_device_token');
+if (!deviceToken) {
+  deviceToken = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
+  localStorage.setItem('yb_device_token', deviceToken);
+}
+function myBookings() {
+  try { return JSON.parse(localStorage.getItem('yb_owned_bookings') || '{}'); } catch(e) { return {}; }
+}
+function rememberOwnBooking(id, ownerToken) {
+  const map = myBookings(); map[id] = ownerToken;
+  localStorage.setItem('yb_owned_bookings', JSON.stringify(map));
+}
+function forgetOwnBooking(id) {
+  const map = myBookings(); delete map[id];
+  localStorage.setItem('yb_owned_bookings', JSON.stringify(map));
+}
+// Slots this device is sharing (as the tag-along), so it can remove itself.
+function mySharedBookings() {
+  try { return JSON.parse(localStorage.getItem('yb_shared_bookings') || '{}'); } catch(e) { return {}; }
+}
+function rememberSharedBooking(id, sharerToken) {
+  const map = mySharedBookings(); map[id] = sharerToken;
+  localStorage.setItem('yb_shared_bookings', JSON.stringify(map));
+}
+function forgetSharedBooking(id) {
+  const map = mySharedBookings(); delete map[id];
+  localStorage.setItem('yb_shared_bookings', JSON.stringify(map));
+}
+
+// ── State ────────────────────────────────────────────────────────────
+let SLOTS = [];
+let currentView = 'day'; // 'day' | 'week'
+let weekStart = mondayOf(new Date());
+let selectedDate = todayStr();
+let bookingsByDate = {}; // { 'YYYY-MM-DD': [{id,date,slot,name}] }
+let pendingBookSlot = null;
+let pendingCancelBooking = null;
+let pendingShareBooking = null;   // booking being requested to share
+let pendingDecideRequest = null;  // {request_id, ...} the owner is deciding on
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function todayStr() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function mondayOf(d) {
+  const day = (d.getDay() + 6) % 7; // 0 = Monday
+  const m = new Date(d); m.setDate(d.getDate() - day);
+  return `${m.getFullYear()}-${pad(m.getMonth()+1)}-${pad(m.getDate())}`;
+}
+function addDaysStr(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function dateLabel(dateStr, opts) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', opts);
+}
+
+const API = '/api/y/' + window.YARD_SLUG;
+
+async function init() {
+  if (!window.YARD_SLUG) return showNotFound();
+  const cfgRes = await fetch(API + '/config');
+  if (cfgRes.status === 403) {
+    const data = await cfgRes.json().catch(() => ({}));
+    return showExpired(data.contact);
+  }
+  if (!cfgRes.ok) return showNotFound();
+  const cfg = await cfgRes.json();
+  SLOTS = cfg.slots;
+  document.title = cfg.name;
+  document.getElementById('yard-title').textContent = cfg.name;
+  document.getElementById('yard-subtitle').textContent = cfg.arenaName + ' — Booking Board';
+  document.getElementById('admin-link').href = '/y/' + window.YARD_SLUG + '/admin';
+  await loadWeek();
+  renderAll();
+  refreshNotifyBanner();
+  checkPendingShareRequests();
+}
+
+function showNotFound() {
+  document.getElementById('page-main').style.display = 'none';
+  document.getElementById('page-expired').style.display = 'none';
+  document.getElementById('page-notfound').style.display = 'flex';
+}
+
+function showExpired(contact) {
+  document.getElementById('page-main').style.display = 'none';
+  document.getElementById('page-notfound').style.display = 'none';
+  document.getElementById('expired-message').textContent = contact
+    ? `This board's subscription has ended — contact ${contact} to renew.`
+    : `This board's subscription has ended — contact your provider to renew.`;
+  document.getElementById('page-expired').style.display = 'flex';
+}
+
+// Ask the server whether any of the bookings this device owns have a pending
+// share request waiting — so the owner can act on it in-app, not just via push.
+async function checkPendingShareRequests() {
+  const ownerTokens = Object.values(myBookings());
+  if (!ownerTokens.length) return;
+  try {
+    const pending = await fetch(API + '/share-requests/pending', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ownerTokens })
+    }).then(r => r.json());
+    if (Array.isArray(pending) && pending.length) openShareDecide(pending[0]);
+  } catch(e) {}
+}
+
+async function loadWeek() {
+  const rows = await fetch(API + '/bookings?start=' + weekStart).then(r => r.json());
+  bookingsByDate = {};
+  rows.forEach(b => { (bookingsByDate[b.date] = bookingsByDate[b.date] || []).push(b); });
+}
+
+function changeWeek(dir) {
+  weekStart = addDaysStr(weekStart, dir * 7);
+  loadWeek().then(renderAll);
+}
+
+function setView(view) {
+  currentView = view;
+  document.getElementById('tab-day').classList.toggle('selected', view === 'day');
+  document.getElementById('tab-week').classList.toggle('selected', view === 'week');
+  renderAll();
+}
+
+function renderAll() {
+  document.getElementById('week-range').textContent =
+    dateLabel(weekStart, {day:'numeric',month:'short'}) + ' – ' + dateLabel(addDaysStr(weekStart,6), {day:'numeric',month:'short'});
+
+  const dayOnly = currentView === 'day';
+  document.getElementById('day-tabs').style.display  = dayOnly ? 'grid' : 'none';
+  document.getElementById('day-label').style.display = dayOnly ? 'block' : 'none';
+  document.getElementById('slot-list').style.display = dayOnly ? 'flex' : 'none';
+  document.getElementById('week-summary').style.display = dayOnly ? 'none' : 'flex';
+
+  if (dayOnly) renderDayTabs(); else renderWeekSummary();
+}
+
+function renderDayTabs() {
+  const tabsEl = document.getElementById('day-tabs');
+  tabsEl.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysStr(weekStart, i);
+    const d = new Date(date + 'T00:00:00');
+    const tab = document.createElement('div');
+    tab.className = 'day-tab' + (date === todayStr() ? ' today' : '') + (date === selectedDate ? ' selected' : '') + ((bookingsByDate[date]||[]).length ? ' has-bookings' : '');
+    tab.innerHTML = `<div class="dname">${d.toLocaleDateString('en-GB',{weekday:'short'})}</div><div class="dnum">${d.getDate()}</div><div class="dot"></div>`;
+    tab.onclick = () => { selectedDate = date; renderAll(); };
+    tabsEl.appendChild(tab);
+  }
+  document.getElementById('day-label').textContent = dateLabel(selectedDate, {weekday:'long', day:'numeric', month:'long'});
+  renderSlotList();
+}
+
+function renderWeekSummary() {
+  const el = document.getElementById('week-summary');
+  el.innerHTML = '';
+  const owned = myBookings();
+  const now = new Date();
+  const todayS = todayStr();
+  const nowHHMM = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const totalSlots = SLOTS.length;
+
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysStr(weekStart, i);
+    const d = new Date(date + 'T00:00:00');
+    const isToday = date === todayS;
+    const isPastDay = date < todayS;
+    const bookings = (bookingsByDate[date] || []).slice().sort((a,b) => a.slot.localeCompare(b.slot));
+
+    // How many slots are still genuinely bookable that day (future only)
+    const freeCount = isPastDay ? 0 : SLOTS.filter(s => {
+      if (byslotHas(bookings, s)) return false;
+      if (isToday && s < nowHHMM) return false;
+      return true;
+    }).length;
+
+    const row = document.createElement('div');
+    row.className = 'wk-day' + (isToday ? ' today' : '');
+    let countText, countClass = '';
+    if (isPastDay) { countText = 'Past'; }
+    else if (freeCount === 0) { countText = 'Fully booked'; countClass = 'full'; }
+    else { countText = `${freeCount} free`; }
+
+    let chipsHtml;
+    if (bookings.length) {
+      chipsHtml = '<div class="wk-chips">' + bookings.map(b => {
+        const mine = owned[b.id] ? ' mine' : '';
+        return `<span class="wk-chip${mine}"><span class="t">${b.slot}</span><span class="n">${escapeHtml(b.name)}${b.sharer_name ? ' + ' + escapeHtml(b.sharer_name) : ''}</span></span>`;
+      }).join('') + '</div>';
+    } else {
+      chipsHtml = `<div class="wk-none">${isPastDay ? 'No bookings' : 'Nothing booked yet'}</div>`;
+    }
+
+    row.innerHTML = `<div class="wk-day-head"><span class="wk-day-name">${d.toLocaleDateString('en-GB',{weekday:'long'})} ${d.getDate()}</span><span class="wk-day-count ${countClass}">${countText}</span></div>${chipsHtml}`;
+    row.onclick = () => { selectedDate = date; setView('day'); };
+    el.appendChild(row);
+  }
+}
+
+function byslotHas(bookings, slot) { return bookings.some(b => b.slot === slot); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderSlotList() {
+  const el = document.getElementById('slot-list');
+  const dayBookings = bookingsByDate[selectedDate] || [];
+  const byslot = {}; dayBookings.forEach(b => byslot[b.slot] = b);
+  const owned = myBookings();
+  const now = new Date();
+  const isToday = selectedDate === todayStr();
+  const isPastDay = selectedDate < todayStr();
+  const nowHHMM = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  el.innerHTML = '';
+  let shown = 0;
+  SLOTS.forEach(slot => {
+    const booking = byslot[slot];
+    // On today, drop slots whose time has already passed so the list only
+    // shows what's still bookable. Past days show nothing to book at all.
+    const slotPassed = isPastDay || (isToday && slot < nowHHMM);
+    if (slotPassed && !booking) return;      // gone and nobody had it — hide
+    if (slotPassed && booking) return;        // already happened — no longer relevant on the board
+
+    shown++;
+    const isMine = booking && owned[booking.id];
+    const div = document.createElement('div');
+    div.className = 'slot ' + (booking ? 'booked' : 'free') + (isMine ? ' mine' : '');
+    let statusHtml;
+    if (!booking) {
+      statusHtml = '<span class="slot-status">Free — tap to book</span>';
+    } else {
+      const badge = (booking.open_to_share && !booking.sharer_name) ? '<span class="slot-badge">Open to share</span>' : '';
+      const sharerLine = booking.sharer_name ? `<div class="slot-sharer">+ ${escapeHtml(booking.sharer_name)} (sharing)</div>` : '';
+      statusHtml = `<div style="text-align:right"><span class="slot-status">${escapeHtml(booking.name)}${badge}</span>${sharerLine}</div>`;
+    }
+    div.innerHTML = `<span class="slot-time">${slot}</span>${statusHtml}`;
+    div.onclick = () => booking ? openManage(booking) : openBook(slot);
+    el.appendChild(div);
+  });
+
+  if (shown === 0) {
+    const msg = document.createElement('div');
+    msg.className = 'empty-msg';
+    msg.textContent = isPastDay ? 'This day has passed.' : isToday ? 'No slots left today.' : 'No slots available.';
+    el.appendChild(msg);
+  }
+}
+
+// ── Booking ──────────────────────────────────────────────────────────
+function openBook(slot) {
+  pendingBookSlot = slot;
+  document.getElementById('book-modal-sub').textContent = dateLabel(selectedDate,{weekday:'long',day:'numeric',month:'long'}) + ' at ' + slot;
+  document.getElementById('book-name').value = '';
+  document.getElementById('book-open-share').checked = false;
+  document.getElementById('book-err').textContent = '';
+  openModal('modal-book');
+  setTimeout(() => document.getElementById('book-name').focus(), 150);
+}
+
+async function confirmBooking() {
+  const name = document.getElementById('book-name').value.trim();
+  const openToShare = document.getElementById('book-open-share').checked;
+  const errEl = document.getElementById('book-err');
+  if (!name) { errEl.textContent = "Enter who's booked in"; return; }
+
+  const res = await fetch(API + '/bookings', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ date: selectedDate, slot: pendingBookSlot, name, deviceToken, openToShare })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || 'Could not book that slot'; await loadWeek(); renderAll(); return; }
+
+  rememberOwnBooking(data.id, data.ownerToken);
+  closeModal('modal-book');
+  await loadWeek(); renderAll();
+  showToast('Booked ' + pendingBookSlot + ' for ' + name);
+}
+
+// ── Manage / cancel / share ──────────────────────────────────────────
+// Context-aware: builds the right buttons depending on whether you own this
+// booking, are already sharing it, or are a bystander who could request to share.
+function openManage(booking) {
+  pendingCancelBooking = booking;
+  pendingShareBooking = booking;
+  const owned = myBookings();
+  const shared = mySharedBookings();
+  const isOwner = !!owned[booking.id];
+  const isSharer = !!shared[booking.id];
+  const when = `${dateLabel(booking.date,{weekday:'long',day:'numeric',month:'long'})} at ${booking.slot}`;
+
+  const sub = `${escapeHtml(booking.name)}${booking.sharer_name ? ' + ' + escapeHtml(booking.sharer_name) + ' (sharing)' : ''} — ${when}`;
+  document.getElementById('cancel-modal-sub').textContent = sub;
+
+  const nameInput = document.getElementById('cancel-name-input');
+  nameInput.style.display = 'none';
+  nameInput.value = '';
+  document.getElementById('cancel-err').textContent = '';
+
+  const btns = document.getElementById('manage-btns');
+  const backBtn = `<button class="modal-btn cancel" onclick="closeModal('modal-cancel')">Back</button>`;
+
+  if (isOwner) {
+    btns.innerHTML = backBtn + `<button class="modal-btn danger" onclick="confirmCancel()">Cancel Booking</button>`;
+  } else if (isSharer) {
+    btns.innerHTML = backBtn + `<button class="modal-btn danger" onclick="removeMyShare()">Remove My Share</button>`;
+  } else if (booking.open_to_share && !booking.sharer_name) {
+    btns.innerHTML = backBtn + `<button class="modal-btn primary" onclick="openShareRequest()">Request to Share</button>`;
+  } else {
+    // Bystander on a normal/full booking — offer the type-the-name cancel fallback
+    // (covers "it's my booking but from another device").
+    nameInput.style.display = 'block';
+    btns.innerHTML = backBtn + `<button class="modal-btn danger" onclick="confirmCancel()">Cancel Booking</button>`;
+  }
+  openModal('modal-cancel');
+}
+
+async function confirmCancel() {
+  const owned = myBookings();
+  const ownerToken = owned[pendingCancelBooking.id];
+  const nameInput = document.getElementById('cancel-name-input');
+  const name = nameInput.style.display !== 'none' ? nameInput.value.trim() : undefined;
+  const errEl = document.getElementById('cancel-err');
+
+  const res = await fetch(API + '/bookings/' + pendingCancelBooking.id, {
+    method: 'DELETE', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ ownerToken, name, deviceToken })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || 'Could not cancel'; return; }
+
+  forgetOwnBooking(pendingCancelBooking.id);
+  closeModal('modal-cancel');
+  await loadWeek(); renderAll();
+  showToast('Booking cancelled');
+}
+
+// ── Share request (requester side) ──
+function openShareRequest() {
+  closeModal('modal-cancel');
+  document.getElementById('share-req-sub').textContent =
+    `${escapeHtml(pendingShareBooking.name)} — ${dateLabel(pendingShareBooking.date,{weekday:'long',day:'numeric',month:'long'})} at ${pendingShareBooking.slot}`;
+  document.getElementById('share-req-name').value = '';
+  document.getElementById('share-req-err').textContent = '';
+  openModal('modal-share-request');
+  setTimeout(() => document.getElementById('share-req-name').focus(), 150);
+}
+async function confirmShareRequest() {
+  const requesterName = document.getElementById('share-req-name').value.trim();
+  const errEl = document.getElementById('share-req-err');
+  if (!requesterName) { errEl.textContent = 'Enter your name'; return; }
+
+  const res = await fetch(API + '/bookings/' + pendingShareBooking.id + '/share-request', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ requesterName, deviceToken })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || 'Could not send request'; return; }
+
+  rememberSharedBooking(pendingShareBooking.id, data.requesterToken); // provisional — becomes real once accepted
+  closeModal('modal-share-request');
+  showToast("Request sent — you'll be notified when they respond");
+}
+
+// ── Owner deciding on a request ──
+function openShareDecide(req) {
+  pendingDecideRequest = req;
+  document.getElementById('share-decide-sub').textContent =
+    `${escapeHtml(req.requester_name)} has requested to share your slot — ${dateLabel(req.date,{weekday:'long',day:'numeric',month:'long'})} at ${req.slot}`;
+  document.getElementById('share-decide-err').textContent = '';
+  openModal('modal-share-decide');
+}
+async function respondShare(decision) {
+  const owned = myBookings();
+  const ownerToken = owned[pendingDecideRequest.booking_id];
+  const errEl = document.getElementById('share-decide-err');
+  const res = await fetch(API + '/share-requests/' + pendingDecideRequest.request_id + '/respond', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ decision, ownerToken, deviceToken })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || 'Could not respond'; return; }
+  closeModal('modal-share-decide');
+  await loadWeek(); renderAll();
+  showToast(decision === 'accept' ? 'Share accepted' : 'Share declined');
+  checkPendingShareRequests(); // handle any others still queued
+}
+
+// ── Sharer removing themselves ──
+async function removeMyShare() {
+  const shared = mySharedBookings();
+  const sharerToken = shared[pendingCancelBooking.id];
+  const errEl = document.getElementById('cancel-err');
+  const res = await fetch(API + '/bookings/' + pendingCancelBooking.id + '/remove-sharer', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ sharerToken, deviceToken })
+  });
+  const data = await res.json();
+  if (!res.ok) { errEl.textContent = data.error || 'Could not remove your share'; return; }
+  forgetSharedBooking(pendingCancelBooking.id);
+  closeModal('modal-cancel');
+  await loadWeek(); renderAll();
+  showToast("You're no longer sharing that slot");
+}
+
+// ── Modals / toast ───────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Share board (any owner can do this — no login, same as booking) ────
+function openShareBoard() {
+  const link = location.origin + '/y/' + window.YARD_SLUG + '/';
+  document.getElementById('share-qr-img').src = API + '/qr';
+  document.getElementById('share-link-text').textContent = link;
+  openModal('modal-share-board');
+}
+function copyShareLink() {
+  const link = location.origin + '/y/' + window.YARD_SLUG + '/';
+  navigator.clipboard.writeText(link).then(() => showToast('Link copied')).catch(() => {});
+}
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.opacity = '1';
+  clearTimeout(el._t); el._t = setTimeout(() => el.style.opacity = '0', 2800);
+}
+
+// ── Push notifications ───────────────────────────────────────────────
+// Reflects the current subscription state in the banner. The banner is now a
+// permanent control, not a one-time prompt: it shows on/off and stays put so
+// people can flip it whenever they like.
+async function refreshNotifyBanner() {
+  const banner = document.getElementById('notify-banner');
+  const msg = document.getElementById('notify-msg');
+  const btn = document.getElementById('notify-btn');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) { banner.style.display = 'none'; return; }
+
+  let subscribed = false;
+  if (Notification.permission === 'granted') {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      subscribed = !!(await reg.pushManager.getSubscription());
+    } catch (e) {}
+  }
+
+  banner.style.display = 'flex';
+  if (subscribed) {
+    banner.classList.add('on');
+    msg.innerHTML = '<span class="dot-on">●</span>Notifications on';
+    btn.textContent = 'Turn off';
+  } else {
+    banner.classList.remove('on');
+    msg.textContent = Notification.permission === 'denied'
+      ? 'Notifications are blocked in your phone settings'
+      : 'Get pinged when the board changes';
+    btn.textContent = 'Enable';
+    // If the OS itself has blocked them, the in-app button can't re-enable —
+    // hide it so it isn't misleading; they'd need to change phone settings.
+    btn.style.display = (Notification.permission === 'denied') ? 'none' : '';
+  }
+}
+
+function toggleNotifications() {
+  const btn = document.getElementById('notify-btn');
+  if (btn.textContent === 'Turn off') disableNotifications();
+  else enableNotifications();
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function enableNotifications() {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { showToast('Notifications not enabled'); refreshNotifyBanner(); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const { key } = await fetch(API + '/vapid-public-key').then(r => r.json());
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key)
+    });
+    await fetch(API + '/push/subscribe', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ subscription: sub.toJSON(), deviceToken })
+    });
+    showToast('Notifications on ✓');
+  } catch (e) {
+    showToast('Could not enable notifications');
+  }
+  refreshNotifyBanner();
+}
+
+async function disableNotifications() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      // Tell the server to stop sending to this device, then drop the local sub.
+      fetch(API + '/push/unsubscribe', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ endpoint: sub.endpoint })
+      }).catch(() => {});
+      await sub.unsubscribe();
+    }
+    showToast('Notifications turned off');
+  } catch (e) {
+    showToast('Could not turn off notifications');
+  }
+  refreshNotifyBanner();
+}
+
+init();
+</script>
+</body>
+</html>
